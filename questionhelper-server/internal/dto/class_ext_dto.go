@@ -130,7 +130,40 @@ type AddGroupMemberRequest struct {
 	UserIDs []uint `json:"user_ids" binding:"required"`
 }
 
+// ==================== Application Extension ====================
+
+// ClassApplyRequest 申请加入班级请求
+type ClassApplyRequest struct {
+	Reason string `json:"reason" binding:"omitempty,max=500"`
+}
+
+// ClassApplicationInfo 班级申请信息
+type ClassApplicationInfo struct {
+	ID         uint       `json:"id"`
+	ClassID    uint       `json:"class_id"`
+	UserID     uint       `json:"user_id"`
+	UserName   string     `json:"user_name"`
+	Reason     string     `json:"reason"`
+	Status     int8       `json:"status"`
+	Remark     string     `json:"remark"`
+	ReviewBy   *uint      `json:"review_by"`
+	ReviewName string     `json:"review_name"`
+	ReviewAt   *time.Time `json:"review_at"`
+	CreatedAt  time.Time  `json:"created_at"`
+}
+
+// ClassReviewApplicationRequest 审批班级申请请求
+type ClassReviewApplicationRequest struct {
+	Remark string `json:"remark"`
+}
+
 // ==================== Attendance Extension ====================
+
+// AttendanceCheckinRequest 考勤签到请求
+type AttendanceCheckinRequest struct {
+	IP       string `json:"ip"`
+	Location string `json:"location"`
+}
 
 // CreateAttendanceRequest 创建考勤请求
 type CreateAttendanceRequest struct {
@@ -299,12 +332,62 @@ type CalculateRankingRequest struct {
 
 // ==================== Tag Extension ====================
 
+// ClassTagCreateRequest 创建班级标签请求
+type ClassTagCreateRequest struct {
+	Name string `json:"name" binding:"required,max=50"`
+}
+
+// ClassTagUpdateRequest 更新班级标签请求
+type ClassTagUpdateRequest struct {
+	Name   string `json:"name" binding:"omitempty,max=50"`
+	Status int8   `json:"status" binding:"omitempty,oneof=0 1"`
+}
+
+// ClassTagInfo 班级标签信息
+type ClassTagInfo struct {
+	ID        uint      `json:"id"`
+	Name      string    `json:"name"`
+	CreatorID uint      `json:"creator_id"`
+	Status    int8      `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 // AddClassTagRequest 为班级添加标签请求
 type AddClassTagRequest struct {
 	TagIDs []uint `json:"tag_ids" binding:"required"`
 }
 
 // ==================== Template Extension ====================
+
+// ClassTemplateCreateRequest 创建班级模板请求
+type ClassTemplateCreateRequest struct {
+	Name        string `json:"name" binding:"required,max=100"`
+	Description string `json:"description" binding:"omitempty,max=500"`
+	Config      string `json:"config"`
+	IsPublic    bool   `json:"is_public"`
+}
+
+// ClassTemplateUpdateRequest 更新班级模板请求
+type ClassTemplateUpdateRequest struct {
+	Name        string `json:"name" binding:"omitempty,max=100"`
+	Description string `json:"description" binding:"omitempty,max=500"`
+	Config      string `json:"config"`
+	IsPublic    *bool  `json:"is_public"`
+	Status      int8   `json:"status" binding:"omitempty,oneof=0 1"`
+}
+
+// ClassTemplateInfo 班级模板信息
+type ClassTemplateInfo struct {
+	ID          uint      `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Config      string    `json:"config"`
+	CreatorID   uint      `json:"creator_id"`
+	IsPublic    bool      `json:"is_public"`
+	UsedCount   int       `json:"used_count"`
+	Status      int8      `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+}
 
 // CreateClassFromTemplateRequest 从模板创建班级请求
 type CreateClassFromTemplateRequest struct {

@@ -679,13 +679,11 @@ func ListClassExams(classID uint, req *dto.PageRequest) ([]model.Exam, int64, er
 	var exams []model.Exam
 	var total int64
 
-	// 通过班级成员ID来查找关联的考试
-	db := database.DB.Model(&model.Exam{}).
-		Where("id IN (SELECT exam_id FROM exam_classes WHERE class_id = ?)", classID)
+	classIDUint := classID
+	db := database.DB.Model(&model.Exam{}).Where("class_id = ?", classIDUint)
 
 	if err := db.Count(&total).Error; err != nil {
-		// 如果 exam_classes 表不存在，尝试其他方式
-		return nil, 0, nil
+		return nil, 0, err
 	}
 
 	err := db.Offset(req.GetOffset()).Limit(req.GetLimit()).
