@@ -6,8 +6,8 @@ import (
 )
 
 func SetupClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
-	// 兼容前端 /classes 接口
-	c := r.Group("/classes")
+	// 与设计文档保持一致使用 /class（单数）
+	c := r.Group("/class")
 	{
 		c.GET("", ctrl.ListClasses)
 		c.GET("/:id", ctrl.GetClass)
@@ -23,7 +23,7 @@ func SetupClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
 }
 
 func SetupAdminClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
-	c := r.Group("/classes")
+	c := r.Group("/class")
 	{
 		c.GET("", ctrl.AdminListClasses)
 		c.GET("/:id", ctrl.AdminGetClass)

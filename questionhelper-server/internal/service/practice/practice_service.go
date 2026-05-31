@@ -62,10 +62,14 @@ func StartPractice(userID uint, req *dto.StartPracticeRequest) (*dto.PracticeSes
 }
 
 // SubmitPractice 提交练习答案
-func SubmitPractice(sessionID uint, req *dto.SubmitPracticeAnswerRequest) error {
+func SubmitPractice(sessionID, userID uint, req *dto.SubmitPracticeAnswerRequest) error {
 	session, err := practiceRepo.FindSessionByID(sessionID)
 	if err != nil {
 		return errors.New("练习会话不存在")
+	}
+
+	if session.UserID != userID {
+		return errors.New("无权操作此练习会话")
 	}
 
 	if session.Status != 0 {

@@ -2,8 +2,10 @@ package user
 
 import (
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"questionhelper-server/internal/dto"
 	userRepo "questionhelper-server/internal/repository/user"
@@ -16,14 +18,17 @@ func ExportUsers(req *dto.UserListRequest) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("查询用户数据失败: %w", err)
 	}
 
-	// 创建CSV内容
 	buf := &bytes.Buffer{}
 
 	// 写入BOM(解决Excel中文乱码)
 	buf.WriteString("\xEF\xBB\xBF")
 
+	w := csv.NewWriter(buf)
+
 	// 写入表头
-	buf.WriteString("ID,用户名,昵称,手机号,邮箱,性别,状态,实名认证,注册时间\n")
+	if err := w.Write([]string{"ID", "用户名", "昵称", "手机号", "邮箱", "性别", "状态", "实名认证", "注册时间"}); err != nil {
+		return nil, fmt.Errorf("写入CSV表头失败: %w", err)
+	}
 
 	// 写入数据
 	for _, u := range users {
@@ -46,8 +51,8 @@ func ExportUsers(req *dto.UserListRequest) (*bytes.Buffer, error) {
 			isReal = "是"
 		}
 
-		line := fmt.Sprintf("%d,%s,%s,%s,%s,%s,%s,%s,%s\n",
-			u.ID,
+		record := []string{
+			strconv.FormatUint(uint64(u.ID), 10),
 			u.Username,
 			u.Nickname,
 			u.Phone,
@@ -56,8 +61,15 @@ func ExportUsers(req *dto.UserListRequest) (*bytes.Buffer, error) {
 			status,
 			isReal,
 			u.CreatedAt.Format("2006-01-02 15:04:05"),
-		)
-		buf.WriteString(line)
+		}
+		if err := w.Write(record); err != nil {
+			return nil, fmt.Errorf("写入CSV数据失败: %w", err)
+		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, fmt.Errorf("刷新CSV写入器失败: %w", err)
 	}
 
 	return buf, nil
@@ -70,14 +82,17 @@ func ExportUsersByTag(tagID uint) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("查询用户数据失败: %w", err)
 	}
 
-	// 创建CSV内容
 	buf := &bytes.Buffer{}
 
 	// 写入BOM
 	buf.WriteString("\xEF\xBB\xBF")
 
+	w := csv.NewWriter(buf)
+
 	// 写入表头
-	buf.WriteString("ID,用户名,昵称,手机号,邮箱,状态\n")
+	if err := w.Write([]string{"ID", "用户名", "昵称", "手机号", "邮箱", "状态"}); err != nil {
+		return nil, fmt.Errorf("写入CSV表头失败: %w", err)
+	}
 
 	// 写入数据
 	for _, u := range users {
@@ -88,15 +103,22 @@ func ExportUsersByTag(tagID uint) (*bytes.Buffer, error) {
 			status = "注销中"
 		}
 
-		line := fmt.Sprintf("%d,%s,%s,%s,%s,%s\n",
-			u.ID,
+		record := []string{
+			strconv.FormatUint(uint64(u.ID), 10),
 			u.Username,
 			u.Nickname,
 			u.Phone,
 			u.Email,
 			status,
-		)
-		buf.WriteString(line)
+		}
+		if err := w.Write(record); err != nil {
+			return nil, fmt.Errorf("写入CSV数据失败: %w", err)
+		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, fmt.Errorf("刷新CSV写入器失败: %w", err)
 	}
 
 	return buf, nil
@@ -109,8 +131,12 @@ func ExportUsersByID(ids []uint) (*bytes.Buffer, error) {
 	// 写入BOM
 	buf.WriteString("\xEF\xBB\xBF")
 
+	w := csv.NewWriter(buf)
+
 	// 写入表头
-	buf.WriteString("ID,用户名,昵称,手机号,邮箱,性别,状态,角色\n")
+	if err := w.Write([]string{"ID", "用户名", "昵称", "手机号", "邮箱", "性别", "状态", "角色"}); err != nil {
+		return nil, fmt.Errorf("写入CSV表头失败: %w", err)
+	}
 
 	for _, id := range ids {
 		u, err := userRepo.FindByID(id)
@@ -140,8 +166,8 @@ func ExportUsersByID(ids []uint) (*bytes.Buffer, error) {
 			roles += role.Name
 		}
 
-		line := fmt.Sprintf("%d,%s,%s,%s,%s,%s,%s,%s\n",
-			u.ID,
+		record := []string{
+			strconv.FormatUint(uint64(u.ID), 10),
 			u.Username,
 			u.Nickname,
 			u.Phone,
@@ -149,37 +175,54 @@ func ExportUsersByID(ids []uint) (*bytes.Buffer, error) {
 			gender,
 			status,
 			roles,
-		)
-		buf.WriteString(line)
+		}
+		if err := w.Write(record); err != nil {
+			return nil, fmt.Errorf("写入CSV数据失败: %w", err)
+		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, fmt.Errorf("刷新CSV写入器失败: %w", err)
 	}
 
 	return buf, nil
 }
 
-// importUsers 从CSV导入用户(示例实现)
+// importUsers 从CSV导入用户
 func importUsers(data []byte) (int, error) {
-	lines := bytes.Split(data, []byte("\n"))
-	if len(lines) <= 1 {
+	// 去掉BOM前缀
+	cleanData := data
+	if len(cleanData) >= 3 && cleanData[0] == 0xEF && cleanData[1] == 0xBB && cleanData[2] == 0xBF {
+		cleanData = cleanData[3:]
+	}
+
+	reader := csv.NewReader(bytes.NewReader(cleanData))
+	reader.TrimLeadingSpace = true
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return 0, fmt.Errorf("解析CSV数据失败: %w", err)
+	}
+
+	if len(records) <= 1 {
 		return 0, fmt.Errorf("数据为空")
 	}
 
 	count := 0
-	// 跳过表头
-	for i := 1; i < len(lines); i++ {
-		line := string(bytes.TrimSpace(lines[i]))
-		if line == "" {
+	// 跳过表头，从第二行开始
+	for _, record := range records[1:] {
+		if len(record) < 3 {
 			continue
 		}
 
-		// 解析CSV行(简单实现，生产环境应使用csv库)
-		fields := bytes.Split(lines[i], []byte(","))
-		if len(fields) < 3 {
+		username := strings.TrimSpace(record[0])
+		password := strings.TrimSpace(record[1])
+		nickname := strings.TrimSpace(record[2])
+
+		if username == "" || password == "" {
 			continue
 		}
-
-		username := string(fields[0])
-		password := string(fields[1])
-		nickname := string(fields[2])
 
 		// 创建用户
 		req := &dto.CreateUserRequest{
@@ -245,29 +288,6 @@ func ExportUsersExcel(req *dto.UserListRequest) (*bytes.Buffer, error) {
 	}
 
 	return buf, nil
-}
-
-// parseCSVLine 解析CSV行
-func parseCSVLine(line string) []string {
-	// 简单实现，生产环境应使用encoding/csv
-	fields := []string{}
-	field := ""
-	inQuote := false
-
-	for _, c := range line {
-		switch {
-		case c == '"':
-			inQuote = !inQuote
-		case c == ',' && !inQuote:
-			fields = append(fields, field)
-			field = ""
-		default:
-			field += string(c)
-		}
-	}
-	fields = append(fields, field)
-
-	return fields
 }
 
 // Atoi 安全的字符串转整数

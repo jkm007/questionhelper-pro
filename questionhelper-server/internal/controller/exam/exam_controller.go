@@ -67,7 +67,7 @@ func (ctrl *ExamController) StartExam(c *gin.Context) {
 
 // SubmitExam 提交考试
 func (ctrl *ExamController) SubmitExam(c *gin.Context) {
-	recordID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	recordID, err := strconv.ParseUint(c.Param("recordId"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的记录ID")
 		return

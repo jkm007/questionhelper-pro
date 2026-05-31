@@ -115,12 +115,26 @@ func UpdateRole(id uint, req *dto.UpdateRoleRequest) error {
 
 // DeleteRole 删除角色
 func DeleteRole(id uint) error {
-	_, err := userRepo.FindRoleByID(id)
+	role, err := userRepo.FindRoleByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("角色不存在")
 		}
 		return fmt.Errorf("查询角色失败: %w", err)
+	}
+
+	// 检查是否为系统内置角色
+	if role.IsSystem {
+		return errors.New("系统内置角色不可删除")
+	}
+
+	// 检查是否有用户关联该角色
+	userCount, err := userRepo.CountUsersByRoleID(id)
+	if err != nil {
+		return fmt.Errorf("检查角色关联用户失败: %w", err)
+	}
+	if userCount > 0 {
+		return fmt.Errorf("该角色下还有 %d 个用户，无法删除", userCount)
 	}
 
 	if err := userRepo.DeleteRoleByID(id); err != nil {

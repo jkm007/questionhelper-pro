@@ -64,6 +64,10 @@ func DeletePaperQuestions(paperID uint) error {
 	return database.DB.Where("paper_id = ?", paperID).Delete(&model.PaperQuestion{}).Error
 }
 
+func UpdatePaperQuestion(pq *model.PaperQuestion) error {
+	return database.DB.Save(pq).Error
+}
+
 // ==================== Exam ====================
 
 func FindExamByID(id uint) (*model.Exam, error) {
@@ -210,6 +214,11 @@ func GetAnswerRecords(recordID uint) ([]model.AnswerRecord, error) {
 	var records []model.AnswerRecord
 	err := database.DB.Where("record_id = ?", recordID).Find(&records).Error
 	return records, err
+}
+
+// DeleteAnswerRecordsByRecordID 删除指定考试记录的所有答题记录
+func DeleteAnswerRecordsByRecordID(recordID uint) error {
+	return database.DB.Where("record_id = ?", recordID).Delete(&model.AnswerRecord{}).Error
 }
 
 // ==================== Score Analysis ====================

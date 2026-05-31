@@ -13,7 +13,7 @@ func SetupExamRoutes(r *gin.RouterGroup, ctrl *exam.ExamController,
 		e.GET("", ctrl.ListExams)
 		e.GET("/:id", ctrl.GetExam)
 		e.POST("/:id/start", ctrl.StartExam)
-		e.POST("/:id/submit", ctrl.SubmitExam)
+		e.POST("/:recordId/submit", ctrl.SubmitExam)
 		e.GET("/:id/result", ctrl.GetExamResult)
 		e.GET("/history", ctrl.GetExamHistory)
 

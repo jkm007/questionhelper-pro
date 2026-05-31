@@ -71,10 +71,32 @@ func DeleteFolder(id, userID uint) error {
 		return errors.New("默认收藏夹不能删除")
 	}
 
+	// 将该收藏夹中的收藏移到默认收藏夹
+	defaultFolder, err := questionRepo.FindDefaultFolder(userID)
+	if err != nil {
+		// 如果没有默认收藏夹，创建一个
+		defaultFolder = &model.FavoriteFolder{
+			UserID:    userID,
+			Name:      "默认收藏夹",
+			IsDefault: true,
+		}
+		if err := questionRepo.CreateFolder(defaultFolder); err != nil {
+			return fmt.Errorf("创建默认收藏夹失败: %w", err)
+		}
+	}
+
+	if err := questionRepo.MoveFavoritesToFolder(id, defaultFolder.ID); err != nil {
+		return fmt.Errorf("移动收藏到默认收藏夹失败: %w", err)
+	}
+
+	// 更新默认收藏夹数量
+	questionRepo.UpdateFolderCount(defaultFolder.ID)
+
 	if err := questionRepo.DeleteFolder(id); err != nil {
 		return fmt.Errorf("删除收藏夹失败: %w", err)
 	}
 
+	logger.Infof("用户 %d 删除收藏夹 %d 成功，收藏已移至默认收藏夹", userID, id)
 	return nil
 }
 
@@ -137,11 +159,9 @@ func FavoriteQuestion(userID, questionID uint, req *dto.FavoriteRequest) error {
 		return fmt.Errorf("收藏失败: %w", err)
 	}
 
-	// 更新题目收藏数
-	question, err := questionRepo.FindByID(questionID)
-	if err == nil {
-		question.FavoriteCount++
-		questionRepo.Update(question)
+	// 更新题目收藏数（原子操作）
+	if err := questionRepo.IncrementFavoriteCount(questionID); err != nil {
+		logger.Errorf("更新题目收藏数失败: %v", err)
 	}
 
 	// 更新收藏夹数量
@@ -157,11 +177,9 @@ func UnfavoriteQuestion(userID, questionID uint) error {
 		return fmt.Errorf("取消收藏失败: %w", err)
 	}
 
-	// 更新题目收藏数
-	question, err := questionRepo.FindByID(questionID)
-	if err == nil && question.FavoriteCount > 0 {
-		question.FavoriteCount--
-		questionRepo.Update(question)
+	// 更新题目收藏数（原子操作）
+	if err := questionRepo.DecrementFavoriteCount(questionID); err != nil {
+		logger.Errorf("更新题目收藏数失败: %v", err)
 	}
 
 	logger.Infof("用户 %d 取消收藏题目 %d 成功", userID, questionID)

@@ -53,6 +53,11 @@ func List(req *dto.QuestionListRequest) ([]model.Question, int64, error) {
 		db = db.Where("status = ?", *req.Status)
 	}
 
+	// 数据权限过滤：普通用户只能看到公开题目和自己创建的题目
+	if req.UserID != nil {
+		db = db.Where("(visibility = 1 OR creator_id = ?)", *req.UserID)
+	}
+
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -137,6 +142,12 @@ func DeleteCategoryByID(id uint) error {
 
 // ==================== Knowledge ====================
 
+func FindKnowledgeByID(id uint) (*model.Knowledge, error) {
+	var k model.Knowledge
+	err := database.DB.First(&k, id).Error
+	return &k, err
+}
+
 func FindKnowledgeByCategoryID(categoryID uint) ([]model.Knowledge, error) {
 	var knowledge []model.Knowledge
 	err := database.DB.Where("category_id = ?", categoryID).
@@ -172,6 +183,18 @@ func IncrementLikeCount(questionID uint) error {
 func DecrementLikeCount(questionID uint) error {
 	return database.DB.Model(&model.Question{}).Where("id = ?", questionID).
 		UpdateColumn("like_count", gorm.Expr("GREATEST(like_count - 1, 0)")).Error
+}
+
+// IncrementFavoriteCount 原子递增收藏数
+func IncrementFavoriteCount(questionID uint) error {
+	return database.DB.Model(&model.Question{}).Where("id = ?", questionID).
+		UpdateColumn("favorite_count", gorm.Expr("favorite_count + 1")).Error
+}
+
+// DecrementFavoriteCount 原子递减收藏数
+func DecrementFavoriteCount(questionID uint) error {
+	return database.DB.Model(&model.Question{}).Where("id = ?", questionID).
+		UpdateColumn("favorite_count", gorm.Expr("GREATEST(favorite_count - 1, 0)")).Error
 }
 
 // ==================== Import/Export ====================

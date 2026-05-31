@@ -106,3 +106,32 @@ func UpdateFolderCount(folderID uint) error {
 	return database.DB.Model(&model.FavoriteFolder{}).Where("id = ?", folderID).
 		Update("count", count).Error
 }
+
+// MoveFavoritesToFolder 将某收藏夹中的收藏移到目标收藏夹
+func MoveFavoritesToFolder(fromFolderID, toFolderID uint) error {
+	return database.DB.Model(&model.QuestionFavorite{}).
+		Where("folder_id = ?", fromFolderID).
+		Update("folder_id", toFolderID).Error
+}
+
+// ==================== QuestionLike ====================
+
+// AddLike 添加点赞记录
+func AddLike(like *model.QuestionLike) error {
+	return database.DB.Create(like).Error
+}
+
+// RemoveLike 移除点赞记录
+func RemoveLike(userID, questionID uint) error {
+	return database.DB.Where("user_id = ? AND question_id = ?", userID, questionID).
+		Delete(&model.QuestionLike{}).Error
+}
+
+// IsLiked 是否已点赞
+func IsLiked(userID, questionID uint) bool {
+	var count int64
+	database.DB.Model(&model.QuestionLike{}).
+		Where("user_id = ? AND question_id = ?", userID, questionID).
+		Count(&count)
+	return count > 0
+}

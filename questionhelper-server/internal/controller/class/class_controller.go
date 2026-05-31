@@ -66,6 +66,8 @@ func (ctrl *ClassController) CreateClass(c *gin.Context) {
 
 // UpdateClass 更新班级
 func (ctrl *ClassController) UpdateClass(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的班级ID")
@@ -78,7 +80,7 @@ func (ctrl *ClassController) UpdateClass(c *gin.Context) {
 		return
 	}
 
-	if err := class.UpdateClass(uint(id), &req); err != nil {
+	if err := class.UpdateClass(uint(id), userID, false, &req); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -87,13 +89,15 @@ func (ctrl *ClassController) UpdateClass(c *gin.Context) {
 
 // DeleteClass 删除班级
 func (ctrl *ClassController) DeleteClass(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的班级ID")
 		return
 	}
 
-	if err := class.DeleteClass(uint(id)); err != nil {
+	if err := class.DeleteClass(uint(id), userID, false); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -238,6 +242,8 @@ func (ctrl *ClassController) AdminCreateClass(c *gin.Context) {
 
 // AdminUpdateClass 更新班级（管理员）
 func (ctrl *ClassController) AdminUpdateClass(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的班级ID")
@@ -250,7 +256,7 @@ func (ctrl *ClassController) AdminUpdateClass(c *gin.Context) {
 		return
 	}
 
-	if err := class.UpdateClass(uint(id), &req); err != nil {
+	if err := class.UpdateClass(uint(id), userID, true, &req); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -259,13 +265,15 @@ func (ctrl *ClassController) AdminUpdateClass(c *gin.Context) {
 
 // AdminDeleteClass 删除班级（管理员）
 func (ctrl *ClassController) AdminDeleteClass(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的班级ID")
 		return
 	}
 
-	if err := class.DeleteClass(uint(id)); err != nil {
+	if err := class.DeleteClass(uint(id), userID, true); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -293,6 +301,8 @@ func (ctrl *ClassController) AdminListMembers(c *gin.Context) {
 
 // RemoveMember 移除成员（管理员）
 func (ctrl *ClassController) RemoveMember(c *gin.Context) {
+	operatorID := c.GetUint("user_id")
+
 	classID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的班级ID")
@@ -305,7 +315,7 @@ func (ctrl *ClassController) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	if err := class.RemoveMember(uint(classID), uint(uid)); err != nil {
+	if err := class.RemoveMember(uint(classID), uint(uid), operatorID); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}

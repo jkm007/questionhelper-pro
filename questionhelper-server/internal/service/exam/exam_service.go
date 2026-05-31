@@ -1,8 +1,11 @@
 package exam
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -11,6 +14,7 @@ import (
 	"questionhelper-server/internal/model"
 	examRepo "questionhelper-server/internal/repository/exam"
 	questionRepo "questionhelper-server/internal/repository/question"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -54,6 +58,31 @@ func CreatePaper(creatorID uint, req *dto.CreatePaperRequest) error {
 
 	if err := examRepo.CreatePaper(paper); err != nil {
 		return fmt.Errorf("创建试卷失败: %w", err)
+	}
+
+	// 如果包含题目，自动添加题目
+	if len(req.Questions) > 0 {
+		paperQuestions := make([]model.PaperQuestion, 0, len(req.Questions))
+		totalScore := float64(0)
+		for i, q := range req.Questions {
+			paperQuestions = append(paperQuestions, model.PaperQuestion{
+				PaperID:    paper.ID,
+				QuestionID: q.QuestionID,
+				Score:      q.Score,
+				Sort:       i,
+			})
+			totalScore += q.Score
+		}
+
+		if err := examRepo.AddPaperQuestions(paper.ID, paperQuestions); err != nil {
+			return fmt.Errorf("添加题目失败: %w", err)
+		}
+
+		paper.TotalScore = totalScore
+		paper.TotalCount = len(req.Questions)
+		if err := examRepo.UpdatePaper(paper); err != nil {
+			return fmt.Errorf("更新试卷统计失败: %w", err)
+		}
 	}
 
 	logger.Infof("创建试卷成功: %d", paper.ID)
@@ -187,6 +216,17 @@ func GetExam(id uint) (*dto.ExamInfo, error) {
 
 // CreateExam 创建考试
 func CreateExam(creatorID uint, req *dto.CreateExamRequest) error {
+	// 验证时间合理性
+	if req.EndTime.Before(req.StartTime) {
+		return errors.New("结束时间不能早于开始时间")
+	}
+	if req.PassScore > req.TotalScore {
+		return errors.New("及格分不能大于总分")
+	}
+	if req.Duration <= 0 {
+		return errors.New("考试时长必须大于0")
+	}
+
 	exam := &model.Exam{
 		Title:       req.Title,
 		Description: req.Description,
@@ -299,12 +339,73 @@ func PublishExam(id uint) error {
 		return errors.New("只能发布未发布的考试")
 	}
 
+	// 生成题目快照
+	if err := generateQuestionSnapshot(exam.PaperID); err != nil {
+		logger.Errorf("生成题目快照失败: %v", err)
+		return fmt.Errorf("生成题目快照失败: %w", err)
+	}
+
 	exam.Status = 1
 	if err := examRepo.UpdateExam(exam); err != nil {
 		return fmt.Errorf("发布考试失败: %w", err)
 	}
 
 	logger.Infof("发布考试 %d 成功", id)
+	return nil
+}
+
+// generateQuestionSnapshot 生成题目快照
+func generateQuestionSnapshot(paperID uint) error {
+	paperQuestions, err := examRepo.GetPaperQuestions(paperID)
+	if err != nil {
+		return fmt.Errorf("获取试卷题目失败: %w", err)
+	}
+
+	for i := range paperQuestions {
+		// 如果已有快照则跳过
+		if paperQuestions[i].Snapshot != "" {
+			continue
+		}
+
+		question, err := questionRepo.FindByID(paperQuestions[i].QuestionID)
+		if err != nil {
+			logger.Errorf("获取题目 %d 失败: %v", paperQuestions[i].QuestionID, err)
+			continue
+		}
+
+		snapshot := map[string]interface{}{
+			"title":      question.Title,
+			"content":    question.Content,
+			"type":       question.Type,
+			"difficulty": question.Difficulty,
+			"answer":     question.Answer,
+			"analysis":   question.Analysis,
+		}
+
+		if len(question.Options) > 0 {
+			options := make([]map[string]interface{}, 0, len(question.Options))
+			for _, opt := range question.Options {
+				options = append(options, map[string]interface{}{
+					"label":      opt.Label,
+					"content":    opt.Content,
+					"is_correct": opt.IsCorrect,
+				})
+			}
+			snapshot["options"] = options
+		}
+
+		snapshotJSON, err := json.Marshal(snapshot)
+		if err != nil {
+			logger.Errorf("序列化题目快照失败: %v", err)
+			continue
+		}
+
+		paperQuestions[i].Snapshot = string(snapshotJSON)
+		if err := examRepo.UpdatePaperQuestion(&paperQuestions[i]); err != nil {
+			logger.Errorf("保存题目快照失败: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -385,70 +486,118 @@ func StartExam(examID, userID uint, ip string) (*dto.ExamRecordInfo, error) {
 
 // SubmitExam 提交考试
 func SubmitExam(recordID uint, req *dto.SubmitExamRequest) error {
-	record, err := examRepo.FindExamRecord(recordID)
-	if err != nil {
-		return errors.New("考试记录不存在")
-	}
-
-	if record.Status != 0 {
-		return errors.New("考试已提交")
-	}
-
-	// 获取试卷题目
-	paperQuestions, err := examRepo.GetPaperQuestions(record.ExamID)
-	if err != nil {
-		return fmt.Errorf("获取试卷题目失败: %w", err)
-	}
-
-	// 构建题目分数映射
-	scoreMap := make(map[uint]float64)
-	for _, pq := range paperQuestions {
-		scoreMap[pq.QuestionID] = pq.Score
-	}
-
-	// 计算得分
-	totalScore := float64(0)
-	answerRecords := make([]model.AnswerRecord, 0, len(req.Answers))
-	for _, ans := range req.Answers {
-		// 获取题目正确答案
-		question, err := questionRepo.FindByID(ans.QuestionID)
+	// 使用事务确保原子性
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		record, err := examRepo.FindExamRecord(recordID)
 		if err != nil {
-			continue
+			return errors.New("考试记录不存在")
 		}
 
-		isCorrect := question.Answer == ans.Answer
-		score := float64(0)
-		if isCorrect {
-			score = scoreMap[ans.QuestionID]
+		if record.Status != 0 {
+			return errors.New("考试已提交")
+		}
+
+		// 获取试卷题目
+		paperQuestions, err := examRepo.GetPaperQuestions(record.ExamID)
+		if err != nil {
+			return fmt.Errorf("获取试卷题目失败: %w", err)
+		}
+
+		// 构建题目分数映射
+		scoreMap := make(map[uint]float64)
+		for _, pq := range paperQuestions {
+			scoreMap[pq.QuestionID] = pq.Score
+		}
+
+		// 计算得分
+		totalScore := float64(0)
+		objScore := float64(0)
+		subjScore := float64(0)
+		answerRecords := make([]model.AnswerRecord, 0, len(req.Answers))
+		for _, ans := range req.Answers {
+			// 获取题目正确答案
+			question, err := questionRepo.FindByID(ans.QuestionID)
+			if err != nil {
+				continue
+			}
+
+			maxScore := scoreMap[ans.QuestionID]
+			isCorrect := false
+			score := float64(0)
+
+			switch question.Type {
+			case 1: // 单选题 - 精确匹配
+				isCorrect = question.Answer == ans.Answer
+				if isCorrect {
+					score = maxScore
+				}
+			case 2: // 多选题 - 排序后比较（忽略顺序）
+				isCorrect = compareMultiChoice(question.Answer, ans.Answer)
+				if isCorrect {
+					score = maxScore
+				}
+			case 3: // 判断题 - 精确匹配
+				isCorrect = question.Answer == ans.Answer
+				if isCorrect {
+					score = maxScore
+				}
+			case 4: // 填空题 - 去除首尾空格后比较，支持多个正确答案（用|分隔）
+				isCorrect = compareFillBlank(question.Answer, ans.Answer)
+				if isCorrect {
+					score = maxScore
+				}
+			case 5: // 主观题 - 默认0分，需要人工阅卷
+				score = 0
+				isCorrect = false
+			default:
+				isCorrect = question.Answer == ans.Answer
+				if isCorrect {
+					score = maxScore
+				}
+			}
+
 			totalScore += score
+			if question.Type == 5 {
+				subjScore += score
+			} else {
+				objScore += score
+			}
+
+			answerRecords = append(answerRecords, model.AnswerRecord{
+				RecordID:   recordID,
+				QuestionID: ans.QuestionID,
+				Answer:     ans.Answer,
+				Score:      score,
+				MaxScore:   maxScore,
+				IsCorrect:  isCorrect,
+			})
 		}
 
-		answerRecords = append(answerRecords, model.AnswerRecord{
-			RecordID:   recordID,
-			QuestionID: ans.QuestionID,
-			Answer:     ans.Answer,
-			Score:      score,
-			IsCorrect:  isCorrect,
-		})
-	}
+		// 先删除可能存在的旧答题记录
+		if err := examRepo.DeleteAnswerRecordsByRecordID(recordID); err != nil {
+			return fmt.Errorf("删除旧答题记录失败: %w", err)
+		}
 
-	// 保存答题记录
-	if err := examRepo.CreateAnswerRecords(answerRecords); err != nil {
-		return fmt.Errorf("保存答题记录失败: %w", err)
-	}
+		// 保存答题记录
+		if err := examRepo.CreateAnswerRecords(answerRecords); err != nil {
+			return fmt.Errorf("保存答题记录失败: %w", err)
+		}
 
-	// 更新考试记录
-	now := time.Now()
-	record.Score = totalScore
-	record.Status = 1
-	record.SubmitTime = &now
+		// 更新考试记录
+		now := time.Now()
+		record.Score = totalScore
+		record.ObjScore = objScore
+		record.SubjScore = subjScore
+		record.Status = 1
+		record.SubmitTime = &now
 
-	if err := examRepo.UpdateExamRecord(record); err != nil {
-		return fmt.Errorf("更新考试记录失败: %w", err)
-	}
+		if err := examRepo.UpdateExamRecord(record); err != nil {
+			return fmt.Errorf("更新考试记录失败: %w", err)
+		}
 
-	logger.Infof("用户 %d 提交考试 %d，得分: %.2f", record.UserID, record.ExamID, totalScore)
-	return nil
+		logger.Infof("用户 %d 提交考试 %d，得分: %.2f", record.UserID, record.ExamID, totalScore)
+		return nil
+	})
 }
 
 // GetExamResult 获取考试结果
@@ -585,4 +734,65 @@ func toExamInfo(e *model.Exam) dto.ExamInfo {
 		Status:      e.Status,
 		CreatorID:   e.CreatorID,
 	}
+}
+
+// compareMultiChoice 多选题比较（排序后比较，忽略顺序）
+// 答案格式: "A,B,C" 或 "A、B、C"
+func compareMultiChoice(correct, userAnswer string) bool {
+	correctParts := splitChoiceAnswer(correct)
+	userParts := splitChoiceAnswer(userAnswer)
+
+	if len(correctParts) != len(userParts) {
+		return false
+	}
+
+	sort.Strings(correctParts)
+	sort.Strings(userParts)
+
+	for i := range correctParts {
+		if correctParts[i] != userParts[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// splitChoiceAnswer 拆分多选题答案
+func splitChoiceAnswer(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+
+	// 支持多种分隔符: 逗号(中英文)、顿号
+	s = strings.ReplaceAll(s, "，", ",")
+	s = strings.ReplaceAll(s, "、", ",")
+	parts := strings.Split(s, ",")
+
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// compareFillBlank 填空题比较（去除首尾空格，支持多个正确答案用|分隔）
+func compareFillBlank(correct, userAnswer string) bool {
+	userAnswer = strings.TrimSpace(userAnswer)
+	if userAnswer == "" {
+		return false
+	}
+
+	// 支持多个正确答案用|分隔
+	correctAnswers := strings.Split(correct, "|")
+	for _, ca := range correctAnswers {
+		ca = strings.TrimSpace(ca)
+		if strings.EqualFold(ca, userAnswer) {
+			return true
+		}
+	}
+	return false
 }

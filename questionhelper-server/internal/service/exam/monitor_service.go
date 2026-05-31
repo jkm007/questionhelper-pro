@@ -5,7 +5,11 @@ import (
 	"time"
 
 	"questionhelper-server/internal/dto"
+	"questionhelper-server/internal/model"
 	examRepo "questionhelper-server/internal/repository/exam"
+	notifRepo "questionhelper-server/internal/repository/notification"
+	questionRepo "questionhelper-server/internal/repository/question"
+	"questionhelper-server/pkg/logger"
 )
 
 // GetExamMonitor 获取考试监控信息
@@ -107,6 +111,12 @@ func ReviewExam(examID uint, req *dto.ReviewRequest) error {
 		return fmt.Errorf("查询考试记录失败: %w", err)
 	}
 
+	// 获取考试信息
+	exam, err := examRepo.FindExamByID(examID)
+	if err != nil {
+		return fmt.Errorf("查询考试失败: %w", err)
+	}
+
 	// 更新每道题的分数
 	for _, ans := range req.Answers {
 		answerRecord, err := examRepo.FindAnswerRecordByID(ans.AnswerID)
@@ -119,6 +129,10 @@ func ReviewExam(examID uint, req *dto.ReviewRequest) error {
 		answerRecord.IsReviewed = true
 		now := time.Now()
 		answerRecord.ReviewedAt = &now
+		// 设置阅卷人（从examID关联的考试创建者获取，或使用reviewerID参数）
+		// 这里使用考试的CreatorID作为阅卷人
+		reviewerID := exam.CreatorID
+		answerRecord.ReviewedBy = &reviewerID
 
 		examRepo.UpdateAnswerRecord(answerRecord)
 	}
@@ -126,20 +140,44 @@ func ReviewExam(examID uint, req *dto.ReviewRequest) error {
 	// 重新计算总分
 	answers, _ := examRepo.GetAnswerRecords(record.ID)
 	var totalScore float64
+	var objScore, subjScore float64
 	allReviewed := true
 	for _, a := range answers {
 		totalScore += a.Score
-		if !a.IsReviewed {
+		if a.IsReviewed {
+			// 已阅卷的主观题分数计入主观题得分
+			subjScore += a.Score
+		} else {
 			allReviewed = false
+		}
+		// 客观题得分从原始记录中累计
+		if a.MaxScore > 0 && a.IsCorrect {
+			objScore += a.Score
 		}
 	}
 
 	record.Score = totalScore
+	record.ObjScore = objScore
+	record.SubjScore = subjScore
 	if allReviewed {
 		record.Status = 2 // 已阅卷
 	}
 
 	examRepo.UpdateExamRecord(record)
+
+	// 发送通知给学生
+	notification := &model.Notification{
+		UserID:     record.UserID,
+		Type:       2, // 考试通知
+		Title:      fmt.Sprintf("考试「%s」阅卷完成", exam.Title),
+		Content:    fmt.Sprintf("您的考试已阅卷完成，总分: %.2f。%s", totalScore, req.Comment),
+		TargetType: "exam",
+		TargetID:   examID,
+	}
+
+	if err := notifRepo.Create(notification); err != nil {
+		logger.Errorf("发送阅卷通知失败: %v", err)
+	}
 
 	return nil
 }
@@ -229,6 +267,116 @@ func GetExamAnalysis(examID uint) (*dto.ExamAnalysisResponse, error) {
 		}
 
 		analysis.ScoreStats = stats
+	}
+
+	// 题目级别分析
+	paperQuestions, err := examRepo.GetPaperQuestions(exam.PaperID)
+	if err == nil {
+		questionStats := make([]dto.QuestionStat, 0, len(paperQuestions))
+		for _, pq := range paperQuestions {
+			var correctCount, totalAnswered int
+			var totalQuestionScore float64
+
+			for _, r := range records {
+				if r.Status < 1 {
+					continue
+				}
+				answers, _ := examRepo.GetAnswerRecords(r.ID)
+				for _, a := range answers {
+					if a.QuestionID == pq.QuestionID {
+						totalAnswered++
+						totalQuestionScore += a.Score
+						if a.IsCorrect {
+							correctCount++
+						}
+						break
+					}
+				}
+			}
+
+			qs := dto.QuestionStat{
+				QuestionID: pq.QuestionID,
+				Score:      pq.Score,
+			}
+
+			if totalAnswered > 0 {
+				qs.CorrectRate = float64(correctCount) / float64(totalAnswered) * 100
+				qs.AvgScore = totalQuestionScore / float64(totalAnswered)
+			}
+
+			// 获取题目信息用于标题和类型
+			question, err := questionRepo.FindByID(pq.QuestionID)
+			if err == nil {
+				qs.Title = question.Title
+				qs.Type = question.Type
+				qs.Difficulty = question.Difficulty
+			}
+
+			// 计算区分度（高分组正确率 - 低分组正确率）
+			if totalAnswered >= 4 {
+				// 按总分排序，取前27%为高分组，后27%为低分组
+				highGroupCorrect := 0
+				lowGroupCorrect := 0
+				highGroupTotal := 0
+				lowGroupTotal := 0
+				cutoff := int(float64(totalAnswered) * 0.27)
+
+				// 收集每人的该题得分和总分
+				type studentResult struct {
+					isCorrect bool
+					totalScore float64
+				}
+				var results []studentResult
+				for _, r := range records {
+					if r.Status < 1 {
+						continue
+					}
+					answers, _ := examRepo.GetAnswerRecords(r.ID)
+					for _, a := range answers {
+						if a.QuestionID == pq.QuestionID {
+							results = append(results, studentResult{
+								isCorrect: a.IsCorrect,
+								totalScore: r.Score,
+							})
+							break
+						}
+					}
+				}
+
+				// 按总分排序
+				for i := 0; i < len(results); i++ {
+					for j := i + 1; j < len(results); j++ {
+						if results[j].totalScore > results[i].totalScore {
+							results[i], results[j] = results[j], results[i]
+						}
+					}
+				}
+
+				for i, r := range results {
+					if i < cutoff {
+						highGroupTotal++
+						if r.isCorrect {
+							highGroupCorrect++
+						}
+					}
+					if i >= len(results)-cutoff {
+						lowGroupTotal++
+						if r.isCorrect {
+							lowGroupCorrect++
+						}
+					}
+				}
+
+				if highGroupTotal > 0 && lowGroupTotal > 0 {
+					highRate := float64(highGroupCorrect) / float64(highGroupTotal)
+					lowRate := float64(lowGroupCorrect) / float64(lowGroupTotal)
+					qs.Discrimination = highRate - lowRate
+				}
+			}
+
+			questionStats = append(questionStats, qs)
+		}
+		analysis.QuestionStats = questionStats
 	}
 
 	return analysis, nil

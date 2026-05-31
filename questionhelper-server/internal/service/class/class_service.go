@@ -91,13 +91,24 @@ func CreateClass(creatorID uint, req *dto.CreateClassRequest) error {
 }
 
 // UpdateClass 更新班级
-func UpdateClass(id uint, req *dto.UpdateClassRequest) error {
+func UpdateClass(id, operatorID uint, isAdmin bool, req *dto.UpdateClassRequest) error {
 	class, err := classRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("班级不存在")
 		}
 		return fmt.Errorf("查询班级失败: %w", err)
+	}
+
+	// 系统管理员可跳过权限检查
+	if !isAdmin {
+		// 检查权限：必须是班级创建者或班级管理员（Role >= 2）
+		if class.CreatorID != operatorID {
+			member, err := classRepo.FindMember(id, operatorID)
+			if err != nil || member.Role < 2 {
+				return errors.New("无权操作此班级")
+			}
+		}
 	}
 
 	if req.Name != "" {
@@ -119,13 +130,18 @@ func UpdateClass(id uint, req *dto.UpdateClassRequest) error {
 }
 
 // DeleteClass 删除班级
-func DeleteClass(id uint) error {
-	_, err := classRepo.FindByID(id)
+func DeleteClass(id, operatorID uint, isAdmin bool) error {
+	class, err := classRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("班级不存在")
 		}
 		return fmt.Errorf("查询班级失败: %w", err)
+	}
+
+	// 系统管理员可跳过权限检查；否则只有创建者才能删除班级
+	if !isAdmin && class.CreatorID != operatorID {
+		return errors.New("只有创建者才能删除班级")
 	}
 
 	if err := classRepo.DeleteByID(id); err != nil {
@@ -147,6 +163,16 @@ func JoinClass(userID uint, req *dto.JoinClassRequest) error {
 	_, err = classRepo.FindMember(class.ID, userID)
 	if err == nil {
 		return errors.New("已是班级成员")
+	}
+
+	// 检查班级状态
+	if class.Status != 1 {
+		return errors.New("班级已归档或不可用")
+	}
+
+	// 检查班级是否满员
+	if class.MemberCount >= 500 {
+		return errors.New("班级已满员")
 	}
 
 	member := &model.ClassMember{
@@ -206,10 +232,26 @@ func ListMembers(classID uint, req *dto.ClassMemberListRequest) ([]dto.ClassMemb
 }
 
 // RemoveMember 移除成员
-func RemoveMember(classID, userID uint) error {
+func RemoveMember(classID, userID, operatorID uint) error {
+	// 检查被移除者是否是班级成员
 	_, err := classRepo.FindMember(classID, userID)
 	if err != nil {
 		return errors.New("不是班级成员")
+	}
+
+	// 检查操作者权限
+	operator, err := classRepo.FindMember(classID, operatorID)
+	if err != nil {
+		return errors.New("无权操作此班级")
+	}
+	if operator.Role < 2 {
+		return errors.New("无权移除成员")
+	}
+
+	// 不允许移除创建者（Role == 3）
+	target, _ := classRepo.FindMember(classID, userID)
+	if target != nil && target.Role == 3 {
+		return errors.New("不能移除班级创建者")
 	}
 
 	if err := classRepo.DeleteMember(classID, userID); err != nil {

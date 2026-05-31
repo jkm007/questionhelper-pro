@@ -15,9 +15,9 @@ import (
 	"questionhelper-server/pkg/logger"
 )
 
-// GenerateShareCode 生成分享码
+// GenerateShareCode 生成12位分享码
 func GenerateShareCode() string {
-	b := make([]byte, 16)
+	b := make([]byte, 6)
 	rand.Read(b)
 	return hex.EncodeToString(b)
 }

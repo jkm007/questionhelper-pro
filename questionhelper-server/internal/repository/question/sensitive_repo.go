@@ -53,3 +53,15 @@ func ListSensitiveWords(category string, page, pageSize int) ([]model.SensitiveW
 func BatchCreateSensitiveWords(words []model.SensitiveWord) error {
 	return database.DB.CreateInBatches(words, 100).Error
 }
+
+// DeleteSensitiveWordByID 删除敏感词
+func DeleteSensitiveWordByID(id uint) error {
+	return database.DB.Delete(&model.SensitiveWord{}, id).Error
+}
+
+// HasSensitiveWord 检查内容是否包含敏感词
+func HasSensitiveWord(content string) bool {
+	var count int64
+	database.DB.Model(&model.SensitiveWord{}).Where("status = 1 AND ? LIKE CONCAT('%', word, '%')", content).Count(&count)
+	return count > 0
+}

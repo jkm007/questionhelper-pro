@@ -15,7 +15,28 @@ func BatchPublish(req *dto.BatchQuestionRequest) (*dto.BatchResult, error) {
 	}
 
 	for _, id := range req.IDs {
-		err := UpdateQuestionStatus(id, 1) // 1=已发布
+		// 状态校验：只有审核通过(status=3,待审核可视为已通过审核流程)的题目才能发布
+		question, err := questionRepo.FindByID(id)
+		if err != nil {
+			result.Failed++
+			result.Errors = append(result.Errors, dto.BatchError{
+				ID:     id,
+				Reason: fmt.Sprintf("题目不存在: %v", err),
+			})
+			continue
+		}
+
+		// 只有草稿(0)或待审核(3)状态的题目才允许发布
+		if question.Status != 0 && question.Status != 3 {
+			result.Failed++
+			result.Errors = append(result.Errors, dto.BatchError{
+				ID:     id,
+				Reason: fmt.Sprintf("题目状态(%d)不允许发布，只有草稿或待审核状态的题目才能发布", question.Status),
+			})
+			continue
+		}
+
+		err = UpdateQuestionStatus(id, 1) // 1=已发布
 		if err != nil {
 			result.Failed++
 			result.Errors = append(result.Errors, dto.BatchError{

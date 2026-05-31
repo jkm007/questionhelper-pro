@@ -2,8 +2,11 @@ package auth
 
 import (
 	"context"
+	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -62,22 +65,17 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 
 	// 验证密码
 	if !encrypt.CheckPassword(req.Password, u.Password) {
-		// 增加失败次数
-		newFailCount := u.LoginFailCount + 1
-		updateData := map[string]interface{}{
-			"login_fail_count": newFailCount,
+		// 使用原子操作增加失败次数
+		if err := user.IncrementLoginFailCount(u.ID); err != nil {
+			logger.Errorf("更新登录失败次数失败: %v", err)
 		}
-
-		// 检查是否需要锁定
+		// 重新获取用户信息以获取最新的失败次数
+		u, _ = user.FindByUsername(req.Username)
+		newFailCount := u.LoginFailCount
 		if newFailCount >= maxLoginFailCount {
 			lockUntil := time.Now().Add(lockDuration)
-			updateData["lock_until"] = lockUntil
+			user.UpdateByID(u.ID, map[string]interface{}{"lock_until": lockUntil})
 			logger.Warnf("用户 %s 登录失败 %d 次，账号已锁定 %v", req.Username, newFailCount, lockDuration)
-		}
-
-		// 更新数据库
-		if err := user.UpdateByID(u.ID, updateData); err != nil {
-			logger.Errorf("更新登录失败次数失败: %v", err)
 		}
 
 		// 记录登录日志
@@ -281,7 +279,7 @@ func LogoutAll(userID uint) error {
 	for _, device := range devices {
 		// 将每个设备的 Token JTI 加入黑名单
 		blacklistKey := key.TokenBlacklistKey(device.TokenJTI)
-		database.RDB.Set(ctx, blacklistKey, "1", 2*time.Hour)
+		database.RDB.Set(ctx, blacklistKey, "1", 7*24*time.Hour)
 	}
 
 	// 删除所有设备记录
@@ -536,6 +534,9 @@ func ExportUserData(userID uint) (*dto.UserDataExport, error) {
 }
 
 // recordLoginLog 记录登录日志
+// 注意: IP 字段当前使用 req.DeviceInfo（语义为设备信息/User-Agent），
+// 理想情况下应由客户端单独传递 IP 或从请求头 X-Forwarded-For 中提取。
+// 此处暂用 DeviceInfo 兼容，后续应添加专门的 IP 字段到 LoginRequest。
 func recordLoginLog(u *model.User, req *dto.LoginRequest, success bool, message string) {
 	status := int8(1)
 	if !success {
@@ -545,7 +546,7 @@ func recordLoginLog(u *model.User, req *dto.LoginRequest, success bool, message 
 	log := &model.LoginLog{
 		UserID:    &u.ID,
 		Username:  u.Username,
-		IP:        req.DeviceInfo,
+		IP:        req.DeviceInfo, // TODO: 应使用独立的 IP 字段，DeviceInfo 语义为设备信息
 		Status:    status,
 		Msg:       message,
 		LoginType: "password",
@@ -573,11 +574,18 @@ func recordSecurityLog(userID uint, eventType, detail, ip string) {
 
 // recordDevice 记录登录设备
 func recordDevice(userID uint, req *dto.LoginRequest, jti string) {
+	// 根据 DeviceID 推断设备类型
+	deviceType := "web"
+	id := strings.ToLower(req.DeviceID)
+	if strings.Contains(id, "mobile") || strings.Contains(id, "app") {
+		deviceType = "mobile"
+	}
+
 	device := &model.LoginDevice{
 		UserID:       userID,
 		DeviceID:     req.DeviceID,
-		DeviceType:   "web",
-		IP:           req.DeviceInfo,
+		DeviceType:   deviceType,
+		IP:           req.DeviceInfo, // TODO: 应使用独立的 IP 字段
 		TokenJTI:     jti,
 		LastActiveAt: time.Now(),
 		IsCurrent:    true,
@@ -599,7 +607,8 @@ func savePasswordHistory(userID uint, password string) error {
 
 // generateVerifyCode 生成6位验证码
 func generateVerifyCode() string {
-	return fmt.Sprintf("%06d", time.Now().UnixNano()%1000000)
+	n, _ := crand.Int(crand.Reader, big.NewInt(1000000))
+	return fmt.Sprintf("%06d", n.Int64())
 }
 
 // buildRoleInfos 构建角色信息列表
@@ -680,7 +689,7 @@ func KickDevice(userID, deviceID uint) error {
 	// 将设备 Token JTI 加入黑名单
 	ctx := context.Background()
 	blacklistKey := key.TokenBlacklistKey(device.TokenJTI)
-	database.RDB.Set(ctx, blacklistKey, "1", 2*time.Hour)
+	database.RDB.Set(ctx, blacklistKey, "1", 7*24*time.Hour)
 
 	// 删除设备记录
 	return user.DeleteDevice(deviceID)
@@ -754,6 +763,11 @@ func ChangePassword(userID uint, oldPassword, newPassword string) error {
 	// 验证旧密码
 	if !encrypt.CheckPassword(oldPassword, u.Password) {
 		return errors.New("旧密码错误")
+	}
+
+	// 检查新密码是否与旧密码相同
+	if oldPassword == newPassword {
+		return errors.New("新密码不能与旧密码相同")
 	}
 
 	// 检查新密码是否与最近 3 次密码相同

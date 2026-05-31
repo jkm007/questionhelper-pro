@@ -9,6 +9,7 @@ import (
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	userRepo "questionhelper-server/internal/repository/user"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/encrypt"
 	"questionhelper-server/pkg/logger"
 )
@@ -73,6 +74,11 @@ func ChangePassword(userID uint, req *dto.ChangePasswordRequest) error {
 	// 验证旧密码
 	if !encrypt.CheckPassword(req.OldPassword, u.Password) {
 		return errors.New("旧密码错误")
+	}
+
+	// 检查新密码是否与旧密码相同
+	if req.OldPassword == req.NewPassword {
+		return errors.New("新密码不能与旧密码相同")
 	}
 
 	// 加密新密码
@@ -333,14 +339,17 @@ func BatchAssignRoles(req *dto.BatchRoleRequest) error {
 		return errors.New("请选择用户")
 	}
 
-	for _, userID := range req.IDs {
-		if err := userRepo.AssignRoles(userID, req.RoleIDs); err != nil {
-			return fmt.Errorf("分配角色失败: %w", err)
+	// 使用事务确保批量分配的原子性
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		for _, userID := range req.IDs {
+			if err := userRepo.AssignRoles(userID, req.RoleIDs); err != nil {
+				return fmt.Errorf("分配角色失败: %w", err)
+			}
 		}
-	}
 
-	logger.Infof("管理员批量为 %d 个用户分配角色 %v", len(req.IDs), req.RoleIDs)
-	return nil
+		logger.Infof("管理员批量为 %d 个用户分配角色 %v", len(req.IDs), req.RoleIDs)
+		return nil
+	})
 }
 
 // ResetPassword 重置用户密码（管理员）

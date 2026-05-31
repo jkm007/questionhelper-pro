@@ -253,13 +253,19 @@ func GetPaperStats(paperID uint) (*dto.PaperStatsResponse, error) {
 		return &dto.PaperStatsResponse{}, nil
 	}
 
-	// 收集所有考试记录的分数
+	// 收集所有考试记录的分数（每个考试使用自身的及格线）
 	var scores []float64
-	for _, exam := range exams {
+	type examScore struct {
+		score     float64
+		passScore float64
+	}
+	var examScores []examScore
+	for _, e := range exams {
 		var records []model.ExamRecord
-		database.DB.Where("exam_id = ? AND status >= 1", exam.ID).Find(&records)
+		database.DB.Where("exam_id = ? AND status >= 1", e.ID).Find(&records)
 		for _, r := range records {
 			scores = append(scores, r.Score)
+			examScores = append(examScores, examScore{score: r.Score, passScore: e.PassScore})
 		}
 	}
 
@@ -276,7 +282,7 @@ func GetPaperStats(paperID uint) (*dto.PaperStatsResponse, error) {
 
 	var total, max, min, passCount float64
 	min = scores[0]
-	for _, s := range scores {
+	for i, s := range scores {
 		total += s
 		if s > max {
 			max = s
@@ -284,8 +290,8 @@ func GetPaperStats(paperID uint) (*dto.PaperStatsResponse, error) {
 		if s < min {
 			min = s
 		}
-		// 假设及格分数为60%的总分
-		if s >= 60 {
+		// 使用考试自身的及格线
+		if s >= examScores[i].passScore {
 			passCount++
 		}
 	}

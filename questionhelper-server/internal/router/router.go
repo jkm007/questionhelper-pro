@@ -51,7 +51,9 @@ func Setup(cfg *config.Config) *gin.Engine {
 	practiceCtrl := practice.NewPracticeController()
 	wrongCtrl := wrong.NewWrongController()
 	commentCtrl := comment.NewCommentController()
+	commentAdminCtrl := comment.NewCommentAdminController()
 	notificationCtrl := notification.NewNotificationController()
+	notificationAdminCtrl := notification.NewNotificationAdminController()
 	statisticsCtrl := statistics.NewStatisticsController()
 	fileCtrl := file.NewFileController()
 	systemCtrl := system.NewSystemController()
@@ -81,6 +83,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		admin := v1.Group("/admin")
 		admin.Use(middleware.AuthMiddleware())
+		admin.Use(middleware.AdminOnly())
 		{
 			SetupAdminUserRoutes(admin, userCtrl, profileCtrl)
 			SetupAdminTagRoutes(admin, tagCtrl)
@@ -91,6 +94,8 @@ func Setup(cfg *config.Config) *gin.Engine {
 			SetupAdminExamRoutes(admin, examCtrl, paperCtrl, monitorCtrl)
 			SetupAdminClassRoutes(admin, classCtrl)
 			SetupAdminSystemRoutes(admin, systemCtrl)
+			SetupAdminNotificationRoutes(admin, notificationAdminCtrl)
+			SetupAdminCommentRoutes(admin, commentAdminCtrl)
 		}
 	}
 

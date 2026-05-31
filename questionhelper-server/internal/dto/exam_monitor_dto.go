@@ -86,12 +86,14 @@ type ScoreStatistics struct {
 
 // QuestionStat 题目统计
 type QuestionStat struct {
-	QuestionID uint    `json:"question_id"`
-	Title      string  `json:"title"`
-	Type       int8    `json:"type"`
-	CorrectRate float64 `json:"correct_rate"`
-	AvgScore   float64 `json:"avg_score"`
-	FullScore  int     `json:"full_score"`
+	QuestionID     uint    `json:"question_id"`
+	Title          string  `json:"title"`
+	Type           int8    `json:"type"`
+	Score          float64 `json:"score"`          // 该题满分
+	Difficulty     int8    `json:"difficulty"`      // 难度等级
+	CorrectRate    float64 `json:"correct_rate"`    // 正确率
+	AvgScore       float64 `json:"avg_score"`       // 平均得分
+	Discrimination float64 `json:"discrimination"`  // 区分度
 }
 
 // StudentScore 学生成绩

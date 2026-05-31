@@ -80,10 +80,52 @@ type QuestionListRequest struct {
 	Difficulty *int8  `form:"difficulty"`
 	Visibility *int8  `form:"visibility"`
 	Status     *int8  `form:"status"`
+	UserID     *uint  `form:"-" json:"-"` // 数据权限过滤用，不由前端直接传入
 }
 
 // ImportQuestionRequest 导入题目请求
 type ImportQuestionRequest struct {
 	CategoryID uint `json:"category_id"`
 	Visibility int8 `json:"visibility" binding:"required,oneof=1 2 3"`
+}
+
+// CreateCategoryRequest 创建分类请求
+type CreateCategoryRequest struct {
+	ParentID *uint  `json:"parent_id"`
+	Name     string `json:"name" binding:"required,max=100"`
+	Sort     int    `json:"sort"`
+}
+
+// UpdateCategoryRequest 更新分类请求
+type UpdateCategoryRequest struct {
+	ParentID *uint  `json:"parent_id"`
+	Name     string `json:"name" binding:"omitempty,max=100"`
+	Sort     int    `json:"sort"`
+}
+
+// CreateKnowledgeRequest 创建知识点请求
+type CreateKnowledgeRequest struct {
+	CategoryID uint   `json:"category_id" binding:"required"`
+	Name       string `json:"name" binding:"required,max=100"`
+}
+
+// UpdateKnowledgeRequest 更新知识点请求
+type UpdateKnowledgeRequest struct {
+	CategoryID uint   `json:"category_id"`
+	Name       string `json:"name" binding:"omitempty,max=100"`
+}
+
+// CreateSensitiveWordRequest 创建敏感词请求
+type CreateSensitiveWordRequest struct {
+	Word string `json:"word" binding:"required"`
+}
+
+// ReviewInfo 审核信息
+type ReviewInfo struct {
+	ID         uint   `json:"id"`
+	QuestionID uint   `json:"question_id"`
+	ReviewerID uint   `json:"reviewer_id"`
+	Status     int8   `json:"status"`
+	Reason     string `json:"reason"`
+	CreatedAt  string `json:"created_at"`
 }

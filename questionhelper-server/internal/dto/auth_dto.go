@@ -52,8 +52,9 @@ type RefreshTokenRequest struct {
 
 // ChangePasswordRequest 修改密码请求
 type ChangePasswordRequest struct {
-	OldPassword string `json:"oldPassword" binding:"required"`
-	NewPassword string `json:"newPassword" binding:"required,min=6,max=20"`
+	OldPassword     string `json:"oldPassword" binding:"required"`
+	NewPassword     string `json:"newPassword" binding:"required,min=6,max=20"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=NewPassword"`
 }
 
 // ResetPasswordRequest 重置密码请求

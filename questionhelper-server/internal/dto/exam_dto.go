@@ -96,7 +96,14 @@ type ExamListRequest struct {
 
 // CreatePaperRequest 创建试卷请求
 type CreatePaperRequest struct {
-	Title       string `json:"title" binding:"required,max=200"`
-	Description string `json:"description"`
-	Type        int8   `json:"type" binding:"required,oneof=1 2"`
+	Title       string                `json:"title" binding:"required,max=200"`
+	Description string                `json:"description"`
+	Type        int8                  `json:"type" binding:"required,oneof=1 2"`
+	Questions   []PaperQuestionRequest `json:"questions"`
+}
+
+// PaperQuestionRequest 试卷题目请求
+type PaperQuestionRequest struct {
+	QuestionID uint    `json:"question_id" binding:"required"`
+	Score      float64 `json:"score" binding:"required,gt=0"`
 }

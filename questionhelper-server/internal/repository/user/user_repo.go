@@ -42,6 +42,12 @@ func UpdateByID(id uint, data map[string]interface{}) error {
 	return database.DB.Model(&model.User{}).Where("id = ?", id).Updates(data).Error
 }
 
+// IncrementLoginFailCount 原子递增登录失败次数
+func IncrementLoginFailCount(id uint) error {
+	return database.DB.Model(&model.User{}).Where("id = ?", id).
+		UpdateColumn("login_fail_count", gorm.Expr("login_fail_count + 1")).Error
+}
+
 func UpdatePassword(id uint, password string) error {
 	return database.DB.Model(&model.User{}).Where("id = ?", id).Update("password", password).Error
 }
@@ -65,8 +71,8 @@ func List(req *dto.UserListRequest) ([]model.User, int64, error) {
 	db := database.DB.Model(&model.User{})
 
 	if req.Keyword != "" {
-		db = db.Where("username LIKE ? OR nickname LIKE ? OR phone LIKE ?",
-			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		db = db.Where("username LIKE ? OR nickname LIKE ? OR phone LIKE ? OR email LIKE ?",
+			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
 	}
 	if req.Status != nil {
 		db = db.Where("status = ?", *req.Status)
@@ -149,8 +155,8 @@ func ListWithTags(req *dto.UserListRequest) ([]model.User, int64, error) {
 	db := database.DB.Model(&model.User{})
 
 	if req.Keyword != "" {
-		db = db.Where("username LIKE ? OR nickname LIKE ? OR phone LIKE ?",
-			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		db = db.Where("username LIKE ? OR nickname LIKE ? OR phone LIKE ? OR email LIKE ?",
+			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
 	}
 	if req.Status != nil {
 		db = db.Where("status = ?", *req.Status)
@@ -217,8 +223,8 @@ func ExportUsers(req *dto.UserListRequest) ([]model.User, error) {
 	db := database.DB.Model(&model.User{})
 
 	if req.Keyword != "" {
-		db = db.Where("username LIKE ? OR nickname LIKE ? OR phone LIKE ?",
-			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		db = db.Where("username LIKE ? OR nickname LIKE ? OR phone LIKE ? OR email LIKE ?",
+			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
 	}
 	if req.Status != nil {
 		db = db.Where("status = ?", *req.Status)
@@ -303,6 +309,13 @@ func UpdateRole(role *model.Role) error {
 
 func DeleteRoleByID(id uint) error {
 	return database.DB.Delete(&model.Role{}, id).Error
+}
+
+// CountUsersByRoleID 统计关联了指定角色的用户数量
+func CountUsersByRoleID(roleID uint) (int64, error) {
+	var count int64
+	err := database.DB.Table("user_roles").Where("role_id = ?", roleID).Count(&count).Error
+	return count, err
 }
 
 // ==================== Menu ====================

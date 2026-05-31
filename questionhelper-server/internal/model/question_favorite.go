@@ -35,3 +35,15 @@ type QuestionFavorite struct {
 func (QuestionFavorite) TableName() string {
 	return "question_favorites"
 }
+
+// QuestionLike 题目点赞表（用于防重复点赞）
+type QuestionLike struct {
+	ID         uint      `gorm:"primarykey" json:"id"`
+	UserID     uint      `gorm:"uniqueIndex:idx_user_like_question;not null" json:"user_id"`
+	QuestionID uint      `gorm:"uniqueIndex:idx_user_like_question;not null" json:"question_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (QuestionLike) TableName() string {
+	return "question_likes"
+}
