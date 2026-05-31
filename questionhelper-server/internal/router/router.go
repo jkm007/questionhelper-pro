@@ -5,11 +5,13 @@ import (
 	"questionhelper-server/internal/controller/auth"
 	"questionhelper-server/internal/controller/class"
 	"questionhelper-server/internal/controller/comment"
+	"questionhelper-server/internal/controller/content"
 	"questionhelper-server/internal/controller/exam"
 	"questionhelper-server/internal/controller/file"
 	logCtrl "questionhelper-server/internal/controller/log"
 	"questionhelper-server/internal/controller/menu"
 	"questionhelper-server/internal/controller/notification"
+	"questionhelper-server/internal/controller/permission"
 	"questionhelper-server/internal/controller/practice"
 	"questionhelper-server/internal/controller/question"
 	"questionhelper-server/internal/controller/statistics"
@@ -47,6 +49,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 	paperCtrl := exam.NewPaperController()
 	answerCtrl := exam.NewAnswerController()
 	monitorCtrl := exam.NewMonitorController()
+	examExtCtrl := exam.NewExamExtController()
 	classCtrl := class.NewClassController()
 	practiceCtrl := practice.NewPracticeController()
 	wrongCtrl := wrong.NewWrongController()
@@ -55,8 +58,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 	notificationCtrl := notification.NewNotificationController()
 	notificationAdminCtrl := notification.NewNotificationAdminController()
 	statisticsCtrl := statistics.NewStatisticsController()
+	statisticsAdminCtrl := statistics.NewStatisticsAdminController()
 	fileCtrl := file.NewFileController()
+	fileAdminCtrl := file.NewFileAdminController()
 	systemCtrl := system.NewSystemController()
+	contentCtrl := content.NewContentController()
+	permissionCtrl := permission.NewPermissionController()
 
 	v1 := r.Group("/api/v1")
 	{
@@ -71,7 +78,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 			SetupTagRoutes(authorized, tagCtrl)
 			SetupMenuRoutes(authorized, menuCtrl)
 			SetupQuestionRoutes(authorized, questionCtrl, versionCtrl, shareCtrl)
-			SetupExamRoutes(authorized, examCtrl, answerCtrl)
+			SetupExamRoutes(authorized, examCtrl, answerCtrl, examExtCtrl)
 			SetupClassRoutes(authorized, classCtrl)
 			SetupPracticeRoutes(authorized, practiceCtrl)
 			SetupWrongRoutes(authorized, wrongCtrl)
@@ -79,6 +86,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 			SetupNotificationRoutes(authorized, notificationCtrl)
 			SetupStatisticsRoutes(authorized, statisticsCtrl)
 			SetupFileRoutes(authorized, fileCtrl)
+			SetupContentRoutes(authorized, contentCtrl)
 		}
 
 		admin := v1.Group("/admin")
@@ -91,11 +99,14 @@ func Setup(cfg *config.Config) *gin.Engine {
 			SetupAdminLogRoutes(admin, logController)
 			SetupAdminMenuRoutes(admin, menuCtrl)
 			SetupAdminQuestionRoutes(admin, questionCtrl, versionCtrl, batchCtrl, shareCtrl, questionStatsCtrl)
-			SetupAdminExamRoutes(admin, examCtrl, paperCtrl, monitorCtrl)
+			SetupAdminExamRoutes(admin, examCtrl, paperCtrl, monitorCtrl, examExtCtrl)
 			SetupAdminClassRoutes(admin, classCtrl)
 			SetupAdminSystemRoutes(admin, systemCtrl)
 			SetupAdminNotificationRoutes(admin, notificationAdminCtrl)
 			SetupAdminCommentRoutes(admin, commentAdminCtrl)
+			SetupAdminStatisticsRoutes(admin, statisticsAdminCtrl, statisticsCtrl)
+			SetupAdminFileRoutes(admin, fileAdminCtrl)
+			SetupAdminButtonPermissionRoutes(admin, permissionCtrl)
 		}
 	}
 

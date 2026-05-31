@@ -46,8 +46,8 @@ type FavoriteRequest struct {
 	Note     string `json:"note" binding:"omitempty,max=500"`
 }
 
-// FavoriteListRequest 收藏列表请求
-type FavoriteListRequest struct {
+// FavoriteQueryRequest 收藏查询请求
+type FavoriteQueryRequest struct {
 	PageRequest
 	FolderID *uint `form:"folder_id"`
 }

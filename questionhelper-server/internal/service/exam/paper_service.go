@@ -181,18 +181,7 @@ func CreateFromTemplate(templateID uint, userID uint, title string) (*dto.PaperI
 	return CopyPaper(templateID, userID, title)
 }
 
-// ListTemplates 模板列表
-func ListTemplates(req *dto.TemplateListRequest) ([]dto.PaperInfo, int64, error) {
-	// 简化实现：查询is_template=true的试卷
-	listReq := &dto.ExamListRequest{
-		PageRequest: req.PageRequest,
-		Keyword:     req.Keyword,
-	}
-	_ = listReq
-
-	// TODO: 实现模板查询
-	return nil, 0, nil
-}
+// ListTemplates 模板列表 - moved to exam_ext_service.go
 
 // ExportPaper 导出试卷
 func ExportPaper(paperID uint) (*dto.ExportPaperResponse, error) {

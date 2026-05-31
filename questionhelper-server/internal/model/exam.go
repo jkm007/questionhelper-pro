@@ -21,9 +21,15 @@ type Exam struct {
 	MaxAttempts   int            `gorm:"default:1" json:"max_attempts"`
 	Shuffle       bool           `gorm:"default:false;comment:是否打乱顺序" json:"shuffle"`
 	ShowAnswer    int8           `gorm:"default:0;comment:是否显示答案:0=不显示,1=交卷后,2=考试后" json:"show_answer"`
-	AntiCheat     int8           `gorm:"default:0;comment:防作弊级别:0=无,1=基础,2=严格" json:"anti_cheat"`
-	Status        int8           `gorm:"default:0;comment:状态:0=未发布,1=进行中,2=已结束" json:"status"`
-	CreatorID     uint           `gorm:"index" json:"creator_id"`
+	AntiCheat      int8           `gorm:"default:0;comment:防作弊级别:0=无,1=基础,2=严格" json:"anti_cheat"`
+	Status         int8           `gorm:"default:0;comment:状态:0=未发布,1=进行中,2=已结束" json:"status"`
+	ExamPassword   string         `gorm:"size:100;comment:考试密码" json:"exam_password"`
+	StatusPause    bool           `gorm:"default:false;comment:是否暂停" json:"status_pause"`
+	ShowRanking    bool           `gorm:"default:false;comment:是否显示排名" json:"show_ranking"`
+	RankingType    int            `gorm:"default:1;comment:排名方式:1=按分数,2=按用时,3=按正确率" json:"ranking_type"`
+	OriginalEndTime *time.Time    `json:"original_end_time"`                                // 原始结束时间
+	ExtendReason   string         `gorm:"size:500;comment:延期原因" json:"extend_reason"`
+	CreatorID      uint           `gorm:"index" json:"creator_id"`
 	Creator       User           `json:"creator,omitempty"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
@@ -87,9 +93,10 @@ type ExamRecord struct {
 	SubmitTime   *time.Time     `json:"submit_time"`
 	DurationUsed int            `gorm:"default:0;comment:实际用时(秒)" json:"duration_used"`
 	IP           string         `gorm:"size:50" json:"ip"`
-	SwitchCount  int            `gorm:"default:0;comment:切屏次数" json:"switch_count"`
-	IPChanges    int            `gorm:"default:0;comment:IP变更次数" json:"ip_changes"`
-	CreatedAt    time.Time      `json:"created_at"`
+	SwitchCount    int            `gorm:"default:0;comment:切屏次数" json:"switch_count"`
+	IPChanges      int            `gorm:"default:0;comment:IP变更次数" json:"ip_changes"`
+	OverallComment string         `gorm:"type:text;comment:总体评语" json:"overall_comment"`
+	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
@@ -109,6 +116,7 @@ type AnswerRecord struct {
 	IsMarked     bool    `gorm:"default:false" json:"is_marked"`           // 是否标记
 	IsReviewed   bool    `gorm:"default:false" json:"is_reviewed"`         // 是否已阅卷
 	ReviewNote   string  `gorm:"size:500" json:"review_note"`              // 阅卷备注
+	Comment      string  `gorm:"type:text;comment:评语/批注" json:"comment"` // 评语/批注
 	ReviewedBy   *uint   `json:"reviewed_by"`
 	ReviewedAt   *time.Time `json:"reviewed_at"`
 }

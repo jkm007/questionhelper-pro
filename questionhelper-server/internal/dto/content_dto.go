@@ -1,7 +1,5 @@
 package dto
 
-import "time"
-
 // ==================== 创作者申请 ====================
 
 // ApplyCreatorRequest 申请成为创作者
@@ -172,6 +170,7 @@ type HotTagInfo struct {
 	Name       string `json:"name"`
 	Slug       string `json:"slug"`
 	UsageCount int    `json:"usage_count"`
+	Rank       int    `json:"rank"`
 }
 
 // ==================== 内容收藏（通用）====================

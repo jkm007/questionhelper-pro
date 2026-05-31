@@ -187,7 +187,7 @@ func UnfavoriteQuestion(userID, questionID uint) error {
 }
 
 // ListFavorites 收藏列表
-func ListFavorites(userID uint, req *dto.FavoriteListRequest) ([]dto.FavoriteInfo, int64, error) {
+func ListFavorites(userID uint, req *dto.FavoriteQueryRequest) ([]dto.FavoriteInfo, int64, error) {
 	favorites, total, err := questionRepo.ListFavorites(userID, req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("查询收藏列表失败: %w", err)

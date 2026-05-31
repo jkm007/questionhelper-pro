@@ -26,9 +26,9 @@
 | 权限级别 | 数量 |
 |----------|------|
 | 公共接口 (无认证) | 12 |
-| 用户端接口 (JWT) | ~310 |
-| 管理端接口 (JWT + Admin) | ~416 |
-| **合计** | **~738** |
+| 用户端接口 (JWT) | ~313 |
+| 管理端接口 (JWT + Admin) | ~424 |
+| **合计** | **~749** |
 
 ### 请求格式
 
@@ -223,6 +223,11 @@
 | GET | `/api/v1/user/favorites` | 获取收藏列表 |
 | POST | `/api/v1/user/favorites` | 添加收藏 |
 | DELETE | `/api/v1/user/favorites/:id` | 取消收藏 |
+| GET | `/api/v1/favorites` | 收藏列表（内容创作） |
+| POST | `/api/v1/favorites` | 添加收藏（内容创作） |
+| DELETE | `/api/v1/favorites/:id` | 取消收藏（内容创作） |
+| PUT | `/api/v1/favorites/:id` | 更新收藏（修改收藏夹/备注） |
+| POST | `/api/v1/favorites/batch-delete` | 批量取消收藏 |
 
 ### 4.2 安全与设备 (auth)
 
@@ -335,6 +340,15 @@
 | GET | `/api/v1/exam-records/:recordId/marked` | 获取标记题目列表 |
 | POST | `/api/v1/exam-records/:recordId/warning` | 上报考试异常行为 |
 
+#### 考试公告与排名
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/exam/:id/notices` | 考试公告列表 |
+| GET | `/api/v1/exam/:id/ranking` | 考试排名 |
+| GET | `/api/v1/exam/:id/ranking/me` | 我的排名 |
+| POST | `/api/v1/exam/:id/verify-password` | 验证考试密码 |
+
 ### 4.7 班级 (class)
 
 | 方法 | 路径 | 说明 |
@@ -440,6 +454,9 @@
 | POST | `/api/v1/applications` | 提交角色申请 |
 | GET | `/api/v1/applications` | 我的申请列表 |
 | GET | `/api/v1/applications/:id` | 申请详情 |
+| POST | `/api/v1/user/apply/creator` | 申请成为创作者 |
+| POST | `/api/v1/user/apply/teacher` | 申请成为教师 |
+| GET | `/api/v1/user/apply/status` | 查询申请状态 |
 
 
 ### 内容创作
@@ -467,6 +484,9 @@
 | POST | `/api/v1/content/tags` | 给内容打标签 |
 | DELETE | `/api/v1/content/tags` | 移除内容标签 |
 | GET | `/api/v1/content/:type/:id/tags` | 获取内容标签列表 |
+| POST | `/api/v1/tags` | 创建标签 |
+| PUT | `/api/v1/tags/:id` | 更新标签 |
+| DELETE | `/api/v1/tags/:id` | 删除标签 |
 | GET | `/api/v1/content/:type/:id/preview` | 内容预览 |
 | POST | `/api/v1/content/preview` | 预览草稿内容 |
 | PUT | `/api/v1/creator/contents/:id` | 编辑创作者内容 |
@@ -629,6 +649,14 @@
 |------|------|------|
 | GET | `/api/v1/practice/recent-categories` | 获取最近浏览的分类列表 |
 | POST | `/api/v1/practice/recent-categories` | 记录分类浏览 |
+| DELETE | `/api/v1/practice/recent-categories/:id` | 删除最近浏览记录 |
+
+### 练习提醒
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/practice/reminder/config` | 获取用户练习提醒配置 |
+| PUT | `/api/v1/practice/reminder/config` | 更新用户练习提醒配置（enabled, reminder_time, reminder_days, channel） |
 
 ### 模拟考试
 
@@ -763,6 +791,7 @@
 | GET | `/api/v1/class/:id/qrcode` | 生成班级二维码（返回Base64图片或图片URL） |
 | PUT | `/api/v1/class/:id/expire` | 设置/修改班级有效期 |
 | GET | `/api/v1/class/:id/exams` | 获取班级考试列表 |
+| POST | `/api/v1/class/:id/exams` | 在班级内发布考试 |
 | GET | `/api/v1/class/:id/notice` | 获取班级公告列表 |
 
 ### 班级考勤管理
@@ -788,7 +817,16 @@
 | GET | `/api/v1/class/:id/discussions/:discussionId` | 获取讨论详情（含回复列表） |
 | PUT | `/api/v1/class/:id/discussions/:discussionId` | 编辑讨论帖 |
 | DELETE | `/api/v1/class/:id/discussions/:discussionId` | 删除讨论帖 |
-| POST | `/api/v1/class/:id/discussions/:discussionId/pin` | 置顶/取消置顶讨论帖 |
+| POST | `/api/v1/class/:id/discussions/:discussionId/pin` | 置顶讨论帖 |
+| POST | `/api/v1/class/:id/discussions/:discussionId/unpin` | 取消置顶讨论帖 |
+
+#### 讨论回复管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/class/:id/discussions/:discussionId/replies` | 回复讨论帖（支持嵌套回复） |
+| PUT | `/api/v1/class/:id/discussions/:discussionId/replies/:replyId` | 编辑回复 |
+| DELETE | `/api/v1/class/:id/discussions/:discussionId/replies/:replyId` | 删除回复 |
 
 ### 班级资源管理
 
@@ -798,6 +836,102 @@
 | GET | `/api/v1/class/:id/resources/statistics` | 获取班级资源统计（题目数、分类数、知识点数） |
 | POST | `/api/v1/class/:id/resources/import` | 从公共题库导入题目到班级 |
 | GET | `/api/v1/class/:id/resources/export` | 导出班级资源 |
+
+#### 班级资源搜索
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/resources/search` | 在班级资源库中搜索（支持按类型、标签、知识点筛选） |
+
+#### 班级资源版本管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/resources/:resourceType/:resourceId/versions` | 资源版本历史列表 |
+| GET | `/api/v1/class/:id/resources/:resourceType/:resourceId/versions/:versionId` | 版本详情（含内容快照） |
+| POST | `/api/v1/class/:id/resources/:resourceType/:resourceId/versions/:versionId/rollback` | 回滚到指定版本 |
+
+#### 班级资源标签
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/resource-tags` | 获取班级资源标签列表 |
+| POST | `/api/v1/class/:id/resource-tags` | 创建资源标签 |
+| PUT | `/api/v1/class/:id/resource-tags/:tagId` | 编辑资源标签 |
+| DELETE | `/api/v1/class/:id/resource-tags/:tagId` | 删除资源标签 |
+| POST | `/api/v1/class/:id/resources/:resourceType/:resourceId/tags` | 为资源打标签 |
+| DELETE | `/api/v1/class/:id/resources/:resourceType/:resourceId/tags/:tagId` | 移除资源标签 |
+
+#### 班级资源审核
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/resource-reviews` | 获取待审核资源列表 |
+| POST | `/api/v1/class/:id/resource-reviews/:reviewId/approve` | 审核通过 |
+| POST | `/api/v1/class/:id/resource-reviews/:reviewId/reject` | 审核驳回 |
+| PUT | `/api/v1/class/:id/resource-review-config` | 配置是否需要审核（针对创作者角色） |
+| GET | `/api/v1/class/:id/resource-review-config` | 获取审核配置 |
+
+### 班级作业模板管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/homework-templates` | 获取班级作业模板列表 |
+| POST | `/api/v1/class/:id/homework-templates` | 创建作业模板 |
+| GET | `/api/v1/class/:id/homework-templates/:templateId` | 获取作业模板详情 |
+| PUT | `/api/v1/class/:id/homework-templates/:templateId` | 编辑作业模板 |
+| DELETE | `/api/v1/class/:id/homework-templates/:templateId` | 删除作业模板 |
+| POST | `/api/v1/class/:id/homework-templates/:templateId/create` | 从模板创建作业 |
+
+### 班级成绩预警
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/score-alerts` | 获取成绩预警列表（支持按状态筛选） |
+| POST | `/api/v1/class/:id/score-alerts/rules` | 配置预警规则（阈值、提醒方式） |
+| GET | `/api/v1/class/:id/score-alerts/rules` | 获取预警规则 |
+| POST | `/api/v1/class/:id/score-alerts/:alertId/confirm` | 确认预警（教师操作） |
+| GET | `/api/v1/class/:id/score-alerts/statistics` | 获取预警统计（各科目预警人数） |
+
+### 班级学习报告
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/students/:studentId/report` | 生成学生学习报告（成绩、进度、参与度） |
+| GET | `/api/v1/class/:id/students/report/batch` | 批量生成学习报告 |
+| GET | `/api/v1/class/:id/report/template` | 获取报告模板配置 |
+| PUT | `/api/v1/class/:id/report/template` | 配置报告模板 |
+
+### 班级日志
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/logs` | 获取班级日志列表（支持按操作类型、时间、操作人筛选） |
+| GET | `/api/v1/class/:id/logs/actions` | 获取日志操作类型列表 |
+
+### 班级成员统计
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/members/statistics` | 获取成员整体统计（总人数、活跃人数、新增人数等） |
+| GET | `/api/v1/class/:id/members/:userId/activity` | 获取单个成员活跃度详情（登录、参与考试、提交作业等） |
+| GET | `/api/v1/class/:id/members/participation` | 获取成员参与度排行 |
+
+### 班级创作者权限配置
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/creator-permissions` | 获取创作者权限列表 |
+| PUT | `/api/v1/class/:id/creator-permissions` | 批量配置创作者权限 |
+| PUT | `/api/v1/class/:id/creator-permissions/:permissionKey` | 更新单个权限项 |
+
+### 班级创作者统计
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/class/:id/creators/statistics` | 获取创作者整体统计 |
+| GET | `/api/v1/class/:id/creators/:userId/statistics` | 获取单个创作者统计（创建题目数、活跃度等） |
+| GET | `/api/v1/class/:id/creators/ranking` | 获取创作者贡献排行 |
 
 ### 移动端
 
@@ -1137,23 +1271,37 @@
 | GET | `/api/v1/admin/applications` | 申请列表 |
 | GET | `/api/v1/admin/applications/:id` | 申请详情 |
 | PUT | `/api/v1/admin/applications/:id/review` | 审核申请 |
+| POST | `/api/v1/admin/applications/:id/approve` | 审批通过（创作者/教师申请） |
+| POST | `/api/v1/admin/applications/:id/reject` | 审批拒绝（创作者/教师申请） |
 
 ### 5.6 操作日志
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/admin/operation-logs` | 操作日志列表 |
-| GET | `/api/v1/admin/operation-logs/:id` | 日志详情 |
-| GET | `/api/v1/admin/operation-logs/export` | 导出操作日志 |
-| POST | `/api/v1/admin/operation-logs/clean` | 清空操作日志 |
+| GET | `/api/v1/admin/logs/operation` | 操作日志列表 |
+| GET | `/api/v1/admin/logs/operation/:id` | 日志详情 |
+| GET | `/api/v1/admin/logs/operation/export` | 导出操作日志 |
+| POST | `/api/v1/admin/logs/operation/clean` | 清空操作日志 |
+| GET | `/api/v1/admin/logs/export` | 导出日志（支持指定日志类型） |
+
+### 5.6b 练习管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/practice/statistics` | 全局练习统计概览 |
+| GET | `/api/v1/admin/practice/users` | 用户练习统计列表（支持分页、排序） |
+| GET | `/api/v1/admin/practice/users/:id` | 指定用户练习详情 |
+| GET | `/api/v1/admin/practice/hot-questions` | 热门题目排行（练习次数最多） |
+| GET | `/api/v1/admin/practice/accuracy-analysis` | 正确率分析（按分类/难度/题型） |
+| GET | `/api/v1/admin/practice/difficulty-distribution` | 难度分布统计 |
 
 ### 5.7 登录日志
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/admin/login-logs` | 登录日志列表 |
-| GET | `/api/v1/admin/login-logs/export` | 导出登录日志 |
-| POST | `/api/v1/admin/login-logs/clean` | 清空登录日志 |
+| GET | `/api/v1/admin/logs/login` | 登录日志列表 |
+| GET | `/api/v1/admin/logs/login/export` | 导出登录日志 |
+| POST | `/api/v1/admin/logs/login/clean` | 清空登录日志 |
 
 ### 5.8 菜单管理
 
@@ -1165,6 +1313,7 @@
 | POST | `/api/v1/admin/menus` | 创建菜单 |
 | PUT | `/api/v1/admin/menus/:id` | 更新菜单 |
 | DELETE | `/api/v1/admin/menus/:id` | 删除菜单 |
+| PUT | `/api/v1/admin/menus/sort` | 菜单排序（拖拽排序） |
 
 ### 5.9 题目管理
 
@@ -1255,6 +1404,10 @@
 | GET | `/api/v1/admin/exams/:id/monitor` | 考试监控 |
 | POST | `/api/v1/admin/exams/:id/review` | 阅卷 |
 | GET | `/api/v1/admin/exams/:id/analysis` | 考试分析 |
+| GET | `/api/v1/admin/exams/:id/review-progress` | 阅卷进度 |
+| GET | `/api/v1/admin/exams/:id/warnings` | 异常行为列表 |
+| GET | `/api/v1/admin/exams/:id/extensions` | 延期记录 |
+| GET | `/api/v1/admin/exams/:id/pauses` | 暂停记录 |
 
 ### 5.13 成绩管理
 
@@ -1281,8 +1434,8 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/admin/configs` | 获取系统设置 |
-| PUT | `/api/v1/admin/configs` | 更新系统设置 |
+| GET | `/api/v1/admin/settings` | 获取系统设置 |
+| PUT | `/api/v1/admin/settings` | 更新系统设置 |
 
 
 ### 内容审核
@@ -1297,8 +1450,36 @@
 | POST | `/api/v1/admin/reviews/:id/reply` | 回复审核意见（创作者与审核人沟通） |
 | POST | `/api/v1/admin/reviews/batch/approve` | 批量审核通过 |
 | POST | `/api/v1/admin/reviews/batch/reject` | 批量审核驳回 |
+| POST | `/api/v1/admin/reviews/batch-approve` | 批量审核通过（别名） |
+| POST | `/api/v1/admin/reviews/batch-reject` | 批量审核拒绝（别名） |
 | GET | `/api/v1/admin/reviews/statistics` | 获取审核统计（通过率、驳回率、平均审核时长） |
 | GET | `/api/v1/admin/reviews/timeout` | 获取超时审核提醒列表（超过24小时未处理） |
+
+### 创作者等级管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/creator-levels` | 获取创作者等级列表 |
+| POST | `/api/v1/admin/creator-levels` | 创建创作者等级 |
+| PUT | `/api/v1/admin/creator-levels/:id` | 更新创作者等级 |
+| DELETE | `/api/v1/admin/creator-levels/:id` | 删除创作者等级 |
+
+### 创作者协议管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/agreements` | 获取创作者协议列表 |
+| POST | `/api/v1/admin/agreements` | 创建创作者协议 |
+| PUT | `/api/v1/admin/agreements/:id` | 更新创作者协议 |
+
+### 审核流程管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/review-workflows` | 获取审核流程列表 |
+| POST | `/api/v1/admin/review-workflows` | 创建审核流程 |
+| PUT | `/api/v1/admin/review-workflows/:id` | 更新审核流程 |
+| DELETE | `/api/v1/admin/review-workflows/:id` | 删除审核流程 |
 
 ### 分类管理
 
@@ -1434,22 +1615,22 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/v1/admin/comment` | 获取全部评论列表（支持状态筛选） |
-| PUT | `/api/v1/admin/comment/:id/status` | 审核评论（通过/隐藏） |
-| DELETE | `/api/v1/admin/comment/:id` | 管理员删除评论 |
-| POST | `/api/v1/admin/comment/batch-delete` | 批量删除评论 |
-| GET | `/api/v1/admin/comment/report` | 获取评论举报列表 |
-| PUT | `/api/v1/admin/comment/report/:id` | 处理评论举报 |
-| GET | `/api/v1/admin/comment/blacklist` | 获取评论黑名单列表 |
-| POST | `/api/v1/admin/comment/blacklist` | 添加评论黑名单（禁止特定用户评论） |
-| DELETE | `/api/v1/admin/comment/blacklist/:id` | 移除评论黑名单 |
-| GET | `/api/v1/admin/comment/stats` | 获取评论统计 |
-| GET | `/api/v1/admin/comment/export` | 导出评论为Excel |
-| GET | `/api/v1/admin/comment/audit-rules` | 获取评论审核规则列表 |
-| POST | `/api/v1/admin/comment/audit-rules` | 创建评论审核规则 |
-| PUT | `/api/v1/admin/comment/audit-rules/:id` | 更新评论审核规则 |
-| DELETE | `/api/v1/admin/comment/audit-rules/:id` | 删除评论审核规则 |
-| PUT | `/api/v1/admin/comment/batch-audit` | 批量审核评论 |
+| GET | `/api/v1/admin/comments` | 获取全部评论列表（支持状态筛选） |
+| PUT | `/api/v1/admin/comments/:id/status` | 审核评论（通过/隐藏） |
+| DELETE | `/api/v1/admin/comments/:id` | 管理员删除评论 |
+| POST | `/api/v1/admin/comments/batch-delete` | 批量删除评论 |
+| GET | `/api/v1/admin/comments/reports` | 获取评论举报列表 |
+| PUT | `/api/v1/admin/comments/reports/:id` | 处理评论举报 |
+| GET | `/api/v1/admin/comments/blacklist` | 获取评论黑名单列表 |
+| POST | `/api/v1/admin/comments/blacklist` | 添加评论黑名单（禁止特定用户评论） |
+| DELETE | `/api/v1/admin/comments/blacklist/:id` | 移除评论黑名单 |
+| GET | `/api/v1/admin/comments/stats` | 获取评论统计 |
+| GET | `/api/v1/admin/comments/export` | 导出评论为Excel |
+| GET | `/api/v1/admin/comments/audit-rules` | 获取评论审核规则列表 |
+| POST | `/api/v1/admin/comments/audit-rules` | 创建评论审核规则 |
+| PUT | `/api/v1/admin/comments/audit-rules/:id` | 更新评论审核规则 |
+| DELETE | `/api/v1/admin/comments/audit-rules/:id` | 删除评论审核规则 |
+| PUT | `/api/v1/admin/comments/batch-audit` | 批量审核评论 |
 
 ### 试卷管理
 
@@ -1484,6 +1665,22 @@
 | GET | `/api/v1/admin/corrections` | 管理员获取所有纠错列表（支持状态筛选） |
 | PUT | `/api/v1/admin/corrections/:id` | 管理员审核纠错（采纳/驳回） |
 | PUT | `/api/v1/admin/corrections/:id/status` | 管理员更新纠错状态（已修复） |
+
+### 评语模板管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/comment-templates` | 评语模板列表 |
+| POST | `/api/v1/admin/comment-templates` | 创建评语模板 |
+| PUT | `/api/v1/admin/comment-templates/:id` | 更新评语模板 |
+| DELETE | `/api/v1/admin/comment-templates/:id` | 删除评语模板 |
+
+### 公告管理
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| PUT | `/api/v1/admin/notices/:id` | 编辑公告 |
+| DELETE | `/api/v1/admin/notices/:id` | 撤回公告 |
 
 
 ---

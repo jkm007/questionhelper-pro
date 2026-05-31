@@ -69,7 +69,7 @@ func FindFavorite(userID, questionID uint) (*model.QuestionFavorite, error) {
 }
 
 // ListFavorites 收藏列表
-func ListFavorites(userID uint, req *dto.FavoriteListRequest) ([]model.QuestionFavorite, int64, error) {
+func ListFavorites(userID uint, req *dto.FavoriteQueryRequest) ([]model.QuestionFavorite, int64, error) {
 	var favorites []model.QuestionFavorite
 	var total int64
 

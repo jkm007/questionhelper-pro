@@ -91,16 +91,6 @@ type TrendItem struct {
 	Count int64  `json:"count"`
 }
 
-// ==================== 通知渠道 ====================
-
-// UpdateChannelRequest 更新渠道请求
-type UpdateChannelRequest struct {
-	Name      string `json:"name"`
-	Config    string `json:"config"`
-	IsEnabled *bool  `json:"is_enabled"`
-	Priority  *int   `json:"priority"`
-}
-
 // ==================== 数据备份 ====================
 
 // CreateBackupRequest 创建备份请求
