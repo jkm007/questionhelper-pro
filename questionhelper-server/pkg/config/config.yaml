@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  mode: debug
+
+mysql:
+  host: localhost
+  port: 3306
+  user: root
+  password: ""
+  dbname: questionhelper
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "your-secret-key"
+  expire: 7200
+  refresh_expire: 604800
+
+log:
+  level: debug
+  format: console
+
+oss:
+  type: minio
+  endpoint: localhost:9000
+  access_key: minioadmin
+  secret_key: minioadmin
+  bucket: questionhelper
+  cdn: ""
