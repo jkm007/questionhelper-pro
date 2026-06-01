@@ -1,0 +1,47 @@
+module.exports = {
+  extends: ["@commitlint/config-conventional"],
+  rules: {
+    "type-enum": [
+      2,
+      "always",
+      ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore", "revert", "wip"],
+    ],
+    "scope-enum": [
+      2,
+      "always",
+      ["user", "question", "exam", "class", "content", "statistics", "notification", "file", "system", "log", "backup", "auth", "menu", "permission"],
+    ],
+  },
+  prompt: {
+    types: [
+      { value: "feat", name: "feat:     新功能" },
+      { value: "fix", name: "fix:      修复 bug" },
+      { value: "docs", name: "docs:     文档变更" },
+      { value: "style", name: "style:    代码格式" },
+      { value: "refactor", name: "refactor: 重构" },
+      { value: "perf", name: "perf:     性能优化" },
+      { value: "test", name: "test:     测试" },
+      { value: "build", name: "build:    构建变更" },
+      { value: "ci", name: "ci:       CI 变更" },
+      { value: "chore", name: "chore:    其他变更" },
+      { value: "revert", name: "revert:   回退" },
+      { value: "wip", name: "wip:      进行中" },
+    ],
+    scopes: [
+      { value: "user", name: "用户管理" },
+      { value: "question", name: "题库管理" },
+      { value: "exam", name: "考试管理" },
+      { value: "class", name: "班级管理" },
+      { value: "content", name: "内容管理" },
+      { value: "statistics", name: "数据统计" },
+      { value: "notification", name: "通知管理" },
+      { value: "file", name: "文件管理" },
+      { value: "system", name: "系统设置" },
+      { value: "log", name: "日志管理" },
+      { value: "backup", name: "备份管理" },
+      { value: "auth", name: "认证" },
+      { value: "menu", name: "菜单" },
+      { value: "permission", name: "权限" },
+    ],
+  },
+};
