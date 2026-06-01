@@ -83,37 +83,6 @@ func (ac *AuthController) LogoutAll(c *gin.Context) {
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }
 
-// RefreshToken 刷新令牌
-func (ac *AuthController) RefreshToken(c *gin.Context) {
-	var req dto.RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
-		return
-	}
-
-	result, err := auth.RefreshToken(&req, ac.jwtCfg)
-	if err != nil {
-		response.Error(c, http.StatusUnauthorized, err.Error())
-		return
-	}
-
-	response.Success(c, result)
-}
-
-// GetCaptcha 获取验证码
-func (ac *AuthController) GetCaptcha(c *gin.Context) {
-	id, b64s, err := auth.GetCaptcha()
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "生成验证码失败")
-		return
-	}
-
-	response.Success(c, gin.H{
-		"captchaId":    id,
-		"captchaBase64": b64s,
-	})
-}
-
 // RequestPasswordReset 请求重置密码
 func (ac *AuthController) RequestPasswordReset(c *gin.Context) {
 	var req struct {
@@ -288,38 +257,6 @@ func (ac *AuthController) GetSecurityLogs(c *gin.Context) {
 	})
 }
 
-// GetOAuthStatus 获取第三方绑定状态
-func (ac *AuthController) GetOAuthStatus(c *gin.Context) {
-	userID := c.GetUint("user_id")
-
-	status, err := auth.GetOAuthStatus(userID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	response.Success(c, status)
-}
-
-// VerifyCaptcha 验证验证码
-func (ac *AuthController) VerifyCaptcha(c *gin.Context) {
-	var req struct {
-		CaptchaID  string `json:"captchaId" binding:"required"`
-		CaptchaCode string `json:"captchaCode" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
-		return
-	}
-
-	if err := auth.VerifyCaptcha(req.CaptchaID, req.CaptchaCode); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	response.SuccessWithMessage(c, "验证码正确", nil)
-}
-
 // ChangePassword 修改密码
 func (ac *AuthController) ChangePassword(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -336,72 +273,6 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 	}
 
 	response.SuccessWithMessage(c, "密码修改成功", nil)
-}
-
-// SendSmsCode 发送短信验证码（占位）
-func (ac *AuthController) SendSmsCode(c *gin.Context) {
-	var req struct {
-		Phone     string `json:"phone" binding:"required"`
-		CaptchaID string `json:"captchaId"`
-		CaptchaCode string `json:"captchaCode"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
-		return
-	}
-
-	// TODO: 实现短信发送
-	response.SuccessWithMessage(c, "短信验证码已发送", nil)
-}
-
-// SendEmailCode 发送邮箱验证码（占位）
-func (ac *AuthController) SendEmailCode(c *gin.Context) {
-	var req struct {
-		Email     string `json:"email" binding:"required,email"`
-		CaptchaID string `json:"captchaId"`
-		CaptchaCode string `json:"captchaCode"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
-		return
-	}
-
-	// TODO: 实现邮箱发送
-	response.SuccessWithMessage(c, "邮箱验证码已发送", nil)
-}
-
-// GetOAuthURL 获取第三方授权 URL（占位）
-func (ac *AuthController) GetOAuthURL(c *gin.Context) {
-	provider := c.Param("provider")
-
-	// TODO: 实现第三方 OAuth
-	response.Success(c, gin.H{
-		"url": "https://example.com/oauth/" + provider,
-	})
-}
-
-// OAuthLogin 第三方登录（占位）
-func (ac *AuthController) OAuthLogin(c *gin.Context) {
-	provider := c.Param("provider")
-
-	// TODO: 实现第三方 OAuth
-	response.Error(c, http.StatusNotImplemented, provider+" 登录暂未实现")
-}
-
-// OAuthBind 绑定第三方账号（占位）
-func (ac *AuthController) OAuthBind(c *gin.Context) {
-	provider := c.Param("provider")
-
-	// TODO: 实现第三方绑定
-	response.Error(c, http.StatusNotImplemented, provider+" 绑定暂未实现")
-}
-
-// OAuthUnbind 解绑第三方账号（占位）
-func (ac *AuthController) OAuthUnbind(c *gin.Context) {
-	provider := c.Param("provider")
-
-	// TODO: 实现第三方解绑
-	response.Error(c, http.StatusNotImplemented, provider+" 解绑暂未实现")
 }
 
 // UpdateSecuritySettings 更新安全设置（占位）

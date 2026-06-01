@@ -104,28 +104,6 @@ func (ctrl *CommentController) LikeComment(c *gin.Context) {
 	response.SuccessWithMessage(c, "操作成功", nil)
 }
 
-// ReportComment 举报评论
-func (ctrl *CommentController) ReportComment(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的评论ID")
-		return
-	}
-
-	var req dto.ReportCommentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if err := comment.ReportComment(uint(id), userID, &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "举报成功", nil)
-}
-
 // UploadImage 上传评论图片
 func (ctrl *CommentController) UploadImage(c *gin.Context) {
 	userID := c.GetUint("user_id")

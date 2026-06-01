@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/service/question"
+	"questionhelper-server/internal/service/sensitive"
 	"questionhelper-server/pkg/response"
 )
 
@@ -122,35 +123,6 @@ func (ctrl *QuestionController) ListCategories(c *gin.Context) {
 	response.Success(c, list)
 }
 
-// GetCategoryTree 分类树
-func (ctrl *QuestionController) GetCategoryTree(c *gin.Context) {
-	tree, err := question.GetCategoryTree()
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.Success(c, tree)
-}
-
-// ListKnowledgePoints 知识点列表
-func (ctrl *QuestionController) ListKnowledgePoints(c *gin.Context) {
-	var categoryID *uint
-	if cid := c.Query("category_id"); cid != "" {
-		id, err := strconv.ParseUint(cid, 10, 32)
-		if err == nil {
-			uid := uint(id)
-			categoryID = &uid
-		}
-	}
-
-	list, err := question.ListKnowledgePoints(categoryID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.Success(c, list)
-}
-
 // AdminListQuestions 管理员题目列表
 func (ctrl *QuestionController) AdminListQuestions(c *gin.Context) {
 	var req dto.QuestionListRequest
@@ -257,49 +229,6 @@ func (ctrl *QuestionController) UpdateQuestionStatus(c *gin.Context) {
 	response.SuccessWithMessage(c, "状态更新成功", nil)
 }
 
-// ImportQuestions 导入题目
-func (ctrl *QuestionController) ImportQuestions(c *gin.Context) {
-	creatorID := c.GetUint("user_id")
-
-	// 获取分类ID
-	categoryIDStr := c.PostForm("category_id")
-	categoryID, err := strconv.ParseUint(categoryIDStr, 10, 32)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的分类ID")
-		return
-	}
-
-	// 获取可见性
-	visibilityStr := c.PostForm("visibility")
-	visibility, err := strconv.ParseInt(visibilityStr, 10, 8)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的可见性")
-		return
-	}
-
-	// 获取上传的文件
-	file, _, err := c.Request.FormFile("file")
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "请上传文件")
-		return
-	}
-	defer file.Close()
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "读取文件失败")
-		return
-	}
-
-	count, err := question.ImportQuestions(creatorID, uint(categoryID), int8(visibility), data)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessWithMessage(c, "导入成功", gin.H{"count": count})
-}
-
 // CreateFavoriteFolder 创建收藏夹
 func (ctrl *QuestionController) CreateFavoriteFolder(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -365,134 +294,6 @@ func (ctrl *QuestionController) ListFavoriteFolders(c *gin.Context) {
 		return
 	}
 	response.Success(c, list)
-}
-
-// ExportQuestions 导出题目
-func (ctrl *QuestionController) ExportQuestions(c *gin.Context) {
-	var categoryID *uint
-	if cid := c.Query("category_id"); cid != "" {
-		id, err := strconv.ParseUint(cid, 10, 32)
-		if err == nil {
-			uid := uint(id)
-			categoryID = &uid
-		}
-	}
-
-	list, err := question.ExportQuestions(categoryID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	c.Header("Content-Type", "application/json")
-	c.Header("Content-Disposition", "attachment; filename=questions.json")
-	c.JSON(http.StatusOK, list)
-}
-
-// ==================== 分类管理 ====================
-
-// CreateCategory 创建分类
-func (ctrl *QuestionController) CreateCategory(c *gin.Context) {
-	var req dto.CreateCategoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if err := question.CreateCategory(&req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "创建分类成功", nil)
-}
-
-// UpdateCategory 更新分类
-func (ctrl *QuestionController) UpdateCategory(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的分类ID")
-		return
-	}
-
-	var req dto.UpdateCategoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if err := question.UpdateCategory(uint(id), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "更新分类成功", nil)
-}
-
-// DeleteCategory 删除分类
-func (ctrl *QuestionController) DeleteCategory(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的分类ID")
-		return
-	}
-
-	if err := question.DeleteCategory(uint(id)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "删除分类成功", nil)
-}
-
-// ==================== 知识点管理 ====================
-
-// CreateKnowledgePoint 创建知识点
-func (ctrl *QuestionController) CreateKnowledgePoint(c *gin.Context) {
-	var req dto.CreateKnowledgeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if err := question.CreateKnowledgePoint(&req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "创建知识点成功", nil)
-}
-
-// UpdateKnowledgePoint 更新知识点
-func (ctrl *QuestionController) UpdateKnowledgePoint(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的知识点ID")
-		return
-	}
-
-	var req dto.UpdateKnowledgeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
-		return
-	}
-
-	if err := question.UpdateKnowledgePoint(uint(id), &req); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "更新知识点成功", nil)
-}
-
-// DeleteKnowledgePoint 删除知识点
-func (ctrl *QuestionController) DeleteKnowledgePoint(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		response.Error(c, http.StatusBadRequest, "无效的知识点ID")
-		return
-	}
-
-	if err := question.DeleteKnowledgePoint(uint(id)); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	response.SuccessWithMessage(c, "删除知识点成功", nil)
 }
 
 // ==================== 内容审核 ====================
@@ -570,7 +371,7 @@ func (ctrl *QuestionController) ListSensitiveWords(c *gin.Context) {
 	var req dto.PageRequest
 	c.ShouldBindQuery(&req)
 
-	list, total, err := question.ListSensitiveWords(&req)
+	list, total, err := sensitive.ListSensitiveWords(&req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -586,7 +387,7 @@ func (ctrl *QuestionController) CreateSensitiveWord(c *gin.Context) {
 		return
 	}
 
-	if err := question.CreateSensitiveWord(&req); err != nil {
+	if err := sensitive.CreateSensitiveWord(&req); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -601,7 +402,7 @@ func (ctrl *QuestionController) DeleteSensitiveWord(c *gin.Context) {
 		return
 	}
 
-	if err := question.DeleteSensitiveWord(uint(id)); err != nil {
+	if err := sensitive.DeleteSensitiveWord(uint(id)); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -623,7 +424,7 @@ func (ctrl *QuestionController) ImportSensitiveWords(c *gin.Context) {
 		return
 	}
 
-	count, err := question.ImportSensitiveWords(data)
+	count, err := sensitive.ImportSensitiveWords(data)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -642,7 +443,7 @@ func (ctrl *QuestionController) TestSensitiveWord(c *gin.Context) {
 		return
 	}
 
-	result := question.TestSensitiveWord(req.Content)
+	result := sensitive.TestSensitiveWord(req.Content)
 	response.Success(c, gin.H{"has_sensitive": result})
 }
 

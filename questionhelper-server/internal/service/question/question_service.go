@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"gorm.io/gorm"
 
@@ -264,42 +263,6 @@ func UpdateQuestionStatus(id uint, status int8) error {
 	return nil
 }
 
-// ListCategories 分类列表
-func ListCategories() ([]dto.CategoryInfo, error) {
-	categories, err := questionRepo.FindAllCategories()
-	if err != nil {
-		return nil, fmt.Errorf("查询分类失败: %w", err)
-	}
-
-	list := make([]dto.CategoryInfo, 0, len(categories))
-	for _, c := range categories {
-		list = append(list, toCategoryInfo(&c))
-	}
-	return list, nil
-}
-
-// GetCategoryTree 分类树
-func GetCategoryTree() ([]dto.CategoryInfo, error) {
-	categories, err := questionRepo.FindCategoryTree()
-	if err != nil {
-		return nil, fmt.Errorf("查询分类树失败: %w", err)
-	}
-
-	tree := make([]dto.CategoryInfo, 0, len(categories))
-	for _, c := range categories {
-		tree = append(tree, toCategoryInfo(&c))
-	}
-	return tree, nil
-}
-
-// ListKnowledgePoints 知识点列表
-func ListKnowledgePoints(categoryID *uint) ([]model.Knowledge, error) {
-	if categoryID != nil {
-		return questionRepo.FindKnowledgeByCategoryID(*categoryID)
-	}
-	return questionRepo.FindAllKnowledge()
-}
-
 // LikeQuestion 点赞题目
 func LikeQuestion(userID, questionID uint) error {
 	_, err := questionRepo.FindByID(questionID)
@@ -322,52 +285,6 @@ func LikeQuestion(userID, questionID uint) error {
 	}
 
 	return questionRepo.IncrementLikeCount(questionID)
-}
-
-// ImportQuestions 导入题目
-func ImportQuestions(creatorID uint, categoryID uint, visibility int8, data []byte) (int, error) {
-	// 解析JSON格式的题目数据
-	var importData []struct {
-		Title      string `json:"title"`
-		Content    string `json:"content"`
-		Type       int8   `json:"type"`
-		Difficulty int8   `json:"difficulty"`
-		Answer     string `json:"answer"`
-		Analysis   string `json:"analysis"`
-		Options    []struct {
-			Label     string `json:"label"`
-			Content   string `json:"content"`
-			IsCorrect bool   `json:"is_correct"`
-		} `json:"options"`
-	}
-
-	if err := json.Unmarshal(data, &importData); err != nil {
-		return 0, fmt.Errorf("解析导入数据失败: %w", err)
-	}
-
-	questions := make([]model.Question, 0, len(importData))
-	for _, item := range importData {
-		q := model.Question{
-			Title:      item.Title,
-			Content:    item.Content,
-			Type:       item.Type,
-			Difficulty: item.Difficulty,
-			Answer:     item.Answer,
-			Analysis:   item.Analysis,
-			CategoryID: categoryID,
-			Visibility: visibility,
-			CreatorID:  creatorID,
-			Status:     1,
-		}
-		questions = append(questions, q)
-	}
-
-	if err := questionRepo.BatchCreate(questions); err != nil {
-		return 0, fmt.Errorf("批量创建题目失败: %w", err)
-	}
-
-	logger.Infof("导入 %d 道题目成功", len(questions))
-	return len(questions), nil
 }
 
 // ExportQuestions 导出题目
@@ -426,122 +343,6 @@ func toQuestionInfo(q *model.Question) dto.QuestionInfo {
 	}
 
 	return info
-}
-
-// toCategoryInfo 转换为 CategoryInfo DTO
-func toCategoryInfo(c *model.Category) dto.CategoryInfo {
-	info := dto.CategoryInfo{
-		ID:       c.ID,
-		ParentID: c.ParentID,
-		Name:     c.Name,
-	}
-	if len(c.Children) > 0 {
-		info.Children = make([]dto.CategoryInfo, 0, len(c.Children))
-		for _, child := range c.Children {
-			info.Children = append(info.Children, toCategoryInfo(&child))
-		}
-	}
-	return info
-}
-
-// ==================== 分类管理 ====================
-
-// CreateCategory 创建分类
-func CreateCategory(req *dto.CreateCategoryRequest) error {
-	category := &model.Category{
-		ParentID: req.ParentID,
-		Name:     req.Name,
-		Sort:     req.Sort,
-	}
-
-	if err := questionRepo.CreateCategory(category); err != nil {
-		return fmt.Errorf("创建分类失败: %w", err)
-	}
-
-	logger.Infof("创建分类成功: %s", req.Name)
-	return nil
-}
-
-// UpdateCategory 更新分类
-func UpdateCategory(id uint, req *dto.UpdateCategoryRequest) error {
-	category, err := questionRepo.FindCategoryByID(id)
-	if err != nil {
-		return errors.New("分类不存在")
-	}
-
-	if req.Name != "" {
-		category.Name = req.Name
-	}
-	if req.ParentID != nil {
-		category.ParentID = req.ParentID
-	}
-	category.Sort = req.Sort
-
-	if err := questionRepo.UpdateCategory(category); err != nil {
-		return fmt.Errorf("更新分类失败: %w", err)
-	}
-
-	logger.Infof("更新分类 %d 成功", id)
-	return nil
-}
-
-// DeleteCategory 删除分类
-func DeleteCategory(id uint) error {
-	if err := questionRepo.DeleteCategoryByID(id); err != nil {
-		return fmt.Errorf("删除分类失败: %w", err)
-	}
-
-	logger.Infof("删除分类 %d 成功", id)
-	return nil
-}
-
-// ==================== 知识点管理 ====================
-
-// CreateKnowledgePoint 创建知识点
-func CreateKnowledgePoint(req *dto.CreateKnowledgeRequest) error {
-	knowledge := &model.Knowledge{
-		CategoryID: req.CategoryID,
-		Name:       req.Name,
-	}
-
-	if err := questionRepo.CreateKnowledge(knowledge); err != nil {
-		return fmt.Errorf("创建知识点失败: %w", err)
-	}
-
-	logger.Infof("创建知识点成功: %s", req.Name)
-	return nil
-}
-
-// UpdateKnowledgePoint 更新知识点
-func UpdateKnowledgePoint(id uint, req *dto.UpdateKnowledgeRequest) error {
-	knowledge, err := questionRepo.FindKnowledgeByID(id)
-	if err != nil {
-		return errors.New("知识点不存在")
-	}
-
-	if req.Name != "" {
-		knowledge.Name = req.Name
-	}
-	if req.CategoryID > 0 {
-		knowledge.CategoryID = req.CategoryID
-	}
-
-	if err := questionRepo.UpdateKnowledge(knowledge); err != nil {
-		return fmt.Errorf("更新知识点失败: %w", err)
-	}
-
-	logger.Infof("更新知识点 %d 成功", id)
-	return nil
-}
-
-// DeleteKnowledgePoint 删除知识点
-func DeleteKnowledgePoint(id uint) error {
-	if err := questionRepo.DeleteKnowledgeByID(id); err != nil {
-		return fmt.Errorf("删除知识点失败: %w", err)
-	}
-
-	logger.Infof("删除知识点 %d 成功", id)
-	return nil
 }
 
 // ==================== 内容审核 ====================
@@ -641,63 +442,4 @@ func RejectReview(id, reviewerID uint, reason string) error {
 
 	logger.Infof("审核 %d 拒绝，原因: %s", id, reason)
 	return nil
-}
-
-// ==================== 敏感词管理 ====================
-
-// ListSensitiveWords 敏感词列表
-func ListSensitiveWords(req *dto.PageRequest) ([]model.SensitiveWord, int64, error) {
-	return questionRepo.ListSensitiveWords("", req.Page, req.PageSize)
-}
-
-// CreateSensitiveWord 创建敏感词
-func CreateSensitiveWord(req *dto.CreateSensitiveWordRequest) error {
-	word := &model.SensitiveWord{
-		Word: req.Word,
-	}
-
-	if err := questionRepo.CreateSensitiveWord(word); err != nil {
-		return fmt.Errorf("创建敏感词失败: %w", err)
-	}
-
-	logger.Infof("创建敏感词成功: %s", req.Word)
-	return nil
-}
-
-// DeleteSensitiveWord 删除敏感词
-func DeleteSensitiveWord(id uint) error {
-	if err := questionRepo.DeleteSensitiveWordByID(id); err != nil {
-		return fmt.Errorf("删除敏感词失败: %w", err)
-	}
-
-	logger.Infof("删除敏感词 %d 成功", id)
-	return nil
-}
-
-// ImportSensitiveWords 导入敏感词
-func ImportSensitiveWords(data []byte) (int, error) {
-	lines := strings.Split(string(data), "\n")
-	words := make([]model.SensitiveWord, 0)
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			words = append(words, model.SensitiveWord{Word: line})
-		}
-	}
-
-	if len(words) == 0 {
-		return 0, errors.New("没有有效的敏感词")
-	}
-
-	if err := questionRepo.BatchCreateSensitiveWords(words); err != nil {
-		return 0, fmt.Errorf("批量创建敏感词失败: %w", err)
-	}
-
-	logger.Infof("导入 %d 个敏感词成功", len(words))
-	return len(words), nil
-}
-
-// TestSensitiveWord 测试敏感词
-func TestSensitiveWord(content string) bool {
-	return questionRepo.HasSensitiveWord(content)
 }
