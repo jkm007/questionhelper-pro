@@ -1,11 +1,11 @@
-import { request } from './request'
+import { request, BASE_URL } from './request'
 
 // 上传文件
 export const uploadFile = (filePath: string) => {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
     uni.uploadFile({
-      url: 'http://localhost:8080/api/v1/files/upload',
+      url: `${BASE_URL}/files/upload`,
       filePath,
       name: 'file',
       header: {
@@ -13,10 +13,10 @@ export const uploadFile = (filePath: string) => {
       },
       success: (res) => {
         const data = JSON.parse(res.data)
-        if (data.code === 0) {
+        if (data.code === '00000') {
           resolve(data)
         } else {
-          reject(new Error(data.message))
+          reject(new Error(data.msg))
         }
       },
       fail: reject
@@ -29,7 +29,7 @@ export const uploadImage = (filePath: string) => {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
     uni.uploadFile({
-      url: 'http://localhost:8080/api/v1/files/upload/image',
+      url: `${BASE_URL}/files/upload/image`,
       filePath,
       name: 'file',
       header: {
@@ -37,10 +37,10 @@ export const uploadImage = (filePath: string) => {
       },
       success: (res) => {
         const data = JSON.parse(res.data)
-        if (data.code === 0) {
+        if (data.code === '00000') {
           resolve(data)
         } else {
-          reject(new Error(data.message))
+          reject(new Error(data.msg))
         }
       },
       fail: reject

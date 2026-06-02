@@ -1,5 +1,5 @@
 // H5 模式使用相对路径走 Vite 代理；其他平台使用完整地址
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 interface RequestOptions {
   url: string

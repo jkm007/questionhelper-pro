@@ -1,4 +1,4 @@
-import { request } from './request'
+import { request, BASE_URL } from './request'
 
 // 获取个人信息
 export const getProfile = () => {
@@ -20,7 +20,7 @@ export const uploadAvatar = (filePath: string) => {
   return new Promise((resolve, reject) => {
     const token = uni.getStorageSync('token')
     uni.uploadFile({
-      url: 'http://localhost:8080/api/v1/user/avatar',
+      url: `${BASE_URL}/user/avatar`,
       filePath,
       name: 'file',
       header: {
@@ -28,10 +28,10 @@ export const uploadAvatar = (filePath: string) => {
       },
       success: (res) => {
         const data = JSON.parse(res.data)
-        if (data.code === 0) {
+        if (data.code === '00000') {
           resolve(data)
         } else {
-          reject(new Error(data.message))
+          reject(new Error(data.msg))
         }
       },
       fail: reject
