@@ -146,6 +146,9 @@ func Load() (*Config, error) {
 	// 设置默认值
 	setDefaults(cfg)
 
+	// 环境变量覆盖（容器化部署场景）
+	applyEnvOverrides(cfg)
+
 	// 设置全局配置
 	Cfg = cfg
 
@@ -243,5 +246,48 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.Log.MaxAge == 0 {
 		cfg.Log.MaxAge = 30 // 30天
+	}
+}
+
+// applyEnvOverrides 环境变量覆盖关键配置（容器化部署场景）
+func applyEnvOverrides(cfg *Config) {
+	if v := os.Getenv("MYSQL_HOST"); v != "" {
+		cfg.MySQL.Host = v
+	}
+	if v := os.Getenv("MYSQL_PORT"); v != "" {
+		fmt.Sscanf(v, "%d", &cfg.MySQL.Port)
+	}
+	if v := os.Getenv("MYSQL_USER"); v != "" {
+		cfg.MySQL.User = v
+	}
+	if v := os.Getenv("MYSQL_PASSWORD"); v != "" {
+		cfg.MySQL.Password = v
+	}
+	if v := os.Getenv("MYSQL_DBNAME"); v != "" {
+		cfg.MySQL.DBName = v
+	}
+	if v := os.Getenv("REDIS_HOST"); v != "" {
+		cfg.Redis.Host = v
+	}
+	if v := os.Getenv("REDIS_PORT"); v != "" {
+		fmt.Sscanf(v, "%d", &cfg.Redis.Port)
+	}
+	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
+		cfg.Redis.Password = v
+	}
+	if v := os.Getenv("JWT_SECRET"); v != "" {
+		cfg.JWT.Secret = v
+	}
+	if v := os.Getenv("SERVER_PORT"); v != "" {
+		fmt.Sscanf(v, "%d", &cfg.Server.Port)
+	}
+	if v := os.Getenv("SERVER_MODE"); v != "" {
+		cfg.Server.Mode = v
+	}
+	if v := os.Getenv("LOG_LEVEL"); v != "" {
+		cfg.Log.Level = v
+	}
+	if v := os.Getenv("OSS_TYPE"); v != "" {
+		cfg.OSS.Type = v
 	}
 }

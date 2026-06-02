@@ -1,338 +1,178 @@
 <template>
-  <view class="exam-publish-page">
-    <view class="form-section">
-      <!-- Exam Title -->
+  <view class="publish-page">
+    <view class="form-card">
+      <!-- Title -->
       <view class="form-item">
-        <text class="form-label required">考试名称</text>
-        <view class="input-wrap">
-          <input
-            class="form-input"
-            v-model="form.title"
-            placeholder="请输入考试名称"
-            :maxlength="100"
-          />
-        </view>
-        <text class="char-count">{{ form.title.length }}/100</text>
+        <text class="form-label">考试标题</text>
+        <input class="form-input" v-model="form.title" placeholder="请输入考试标题" />
       </view>
 
       <!-- Description -->
       <view class="form-item">
         <text class="form-label">考试说明</text>
-        <view class="textarea-wrap">
-          <textarea
-            class="form-textarea"
-            v-model="form.description"
-            placeholder="请输入考试说明及注意事项（选填）"
-            :maxlength="500"
-            auto-height
-          />
-        </view>
-        <text class="char-count">{{ form.description.length }}/500</text>
+        <textarea class="form-textarea" v-model="form.description" placeholder="请输入考试说明（选填）" />
       </view>
 
       <!-- Time Limit -->
       <view class="form-item">
-        <text class="form-label required">考试时长</text>
-        <view class="input-wrap input-row">
-          <input
-            class="form-input"
-            type="number"
-            v-model="form.duration"
-            placeholder="请输入考试时长"
-          />
-          <text class="input-suffix">分钟</text>
-        </view>
+        <text class="form-label">考试时长（分钟）</text>
+        <input class="form-input" v-model="form.timeLimit" type="number" placeholder="如：120" />
+      </view>
+
+      <!-- Passing Score -->
+      <view class="form-item">
+        <text class="form-label">及格分数</text>
+        <input class="form-input" v-model="form.passingScore" type="number" placeholder="如：60" />
       </view>
 
       <!-- Start Time -->
       <view class="form-item">
-        <text class="form-label required">开始时间</text>
-        <picker mode="date" :value="startDate" :start="today" @change="onStartDateChange">
-          <view class="picker-row">
-            <text :class="['picker-value', startDate ? '' : 'placeholder']">
-              {{ startDate || '请选择开始日期' }}
-            </text>
-            <text class="picker-arrow">></text>
-          </view>
-        </picker>
-        <picker v-if="startDate" mode="time" :value="startTime" @change="onStartTimeChange">
-          <view class="picker-row">
-            <text :class="['picker-value', startTime ? '' : 'placeholder']">
-              {{ startTime || '请选择开始时间' }}
-            </text>
-            <text class="picker-arrow">></text>
-          </view>
+        <text class="form-label">开始时间</text>
+        <picker mode="multiSelector" :range="dateTimeRange" :value="startDateTimeIndex" @change="onStartChange">
+          <text class="picker-display">{{ form.startTime || '请选择开始时间' }}</text>
         </picker>
       </view>
 
       <!-- End Time -->
       <view class="form-item">
-        <text class="form-label required">结束时间</text>
-        <picker mode="date" :value="endDate" :start="startDate || today" @change="onEndDateChange">
-          <view class="picker-row">
-            <text :class="['picker-value', endDate ? '' : 'placeholder']">
-              {{ endDate || '请选择结束日期' }}
-            </text>
-            <text class="picker-arrow">></text>
-          </view>
-        </picker>
-        <picker v-if="endDate" mode="time" :value="endTime" @change="onEndTimeChange">
-          <view class="picker-row">
-            <text :class="['picker-value', endTime ? '' : 'placeholder']">
-              {{ endTime || '请选择结束时间' }}
-            </text>
-            <text class="picker-arrow">></text>
-          </view>
+        <text class="form-label">结束时间</text>
+        <picker mode="multiSelector" :range="dateTimeRange" :value="endDateTimeIndex" @change="onEndChange">
+          <text class="picker-display">{{ form.endTime || '请选择结束时间' }}</text>
         </picker>
       </view>
-    </view>
 
-    <!-- Select Paper -->
-    <view class="section-header">
-      <text class="section-title required-label">选择试卷</text>
-      <view class="section-action" @tap="onSelectPaper">
-        <text class="section-action-text">{{ selectedPaper ? '重新选择' : '从试卷库选择' }}</text>
-      </view>
-    </view>
-
-    <view v-if="selectedPaper" class="paper-card">
-      <view class="paper-info">
-        <text class="paper-name">{{ selectedPaper.title }}</text>
-        <view class="paper-meta">
-          <text class="paper-meta-item">{{ selectedPaper.questionCount }} 题</text>
-          <text class="paper-meta-divider">|</text>
-          <text class="paper-meta-item">总分 {{ selectedPaper.totalScore }} 分</text>
-        </view>
-      </view>
-      <text class="paper-change" @tap="onSelectPaper">更换</text>
-    </view>
-    <view v-else class="empty-paper">
-      <text class="empty-hint">请选择一份试卷</text>
-    </view>
-
-    <!-- Passing Score -->
-    <view class="form-section" style="margin-top: 0">
+      <!-- Class Selection -->
       <view class="form-item">
-        <text class="form-label required">及格分数</text>
-        <view class="input-wrap input-row">
-          <input
-            class="form-input"
-            type="number"
-            v-model="form.passingScore"
-            placeholder="请输入及格分数"
-          />
-          <text class="input-suffix">分</text>
+        <text class="form-label">发布班级</text>
+        <view class="class-list">
+          <view
+            v-for="cls in classes"
+            :key="cls.id"
+            class="class-item"
+            :class="{ selected: selectedClasses.includes(cls.id) }"
+            @tap="toggleClass(cls.id)"
+          >
+            <view class="checkbox" :class="{ checked: selectedClasses.includes(cls.id) }">
+              <text v-if="selectedClasses.includes(cls.id)" class="check-mark">✓</text>
+            </view>
+            <text class="class-name">{{ cls.name }}</text>
+            <text class="class-count">{{ cls.studentCount }}人</text>
+          </view>
         </view>
-        <text v-if="selectedPaper" class="form-hint">
-          总分 {{ selectedPaper.totalScore }} 分
-        </text>
       </view>
     </view>
 
-    <!-- Select Target Classes -->
-    <view class="section-header">
-      <text class="section-title required-label">指定班级</text>
-      <view class="section-action" @tap="onSelectClasses">
-        <text class="section-action-text">
-          {{ selectedClasses.length > 0 ? '重新选择' : '选择班级' }}
-        </text>
-      </view>
-    </view>
-
-    <view v-if="selectedClasses.length > 0" class="class-tags">
-      <view
-        v-for="cls in selectedClasses"
-        :key="cls.id"
-        class="class-tag"
-      >
-        <text class="class-tag-name">{{ cls.name }}</text>
-        <text class="class-tag-remove" @tap="onRemoveClass(cls.id)">x</text>
-      </view>
-    </view>
-    <view v-else class="empty-classes">
-      <text class="empty-hint">请选择参与考试的班级</text>
-    </view>
-
-    <!-- Submit Button -->
-    <view class="submit-section">
-      <view :class="['submit-btn', submitting ? 'disabled' : '']" @tap="onSubmit">
-        <text class="submit-btn-text">{{ submitting ? '发布中...' : '发布考试' }}</text>
-      </view>
+    <!-- Submit -->
+    <view class="submit-btn" :class="{ disabled: submitting }" @tap="handlePublish">
+      <text class="submit-text">{{ submitting ? '发布中...' : '发布考试' }}</text>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { request } from '@/api/request'
-import { getMyClasses } from '@/api/class'
-import { getPapers } from '@/api/exam'
-
-interface PaperItem {
-  id: string
-  title: string
-  questionCount: number
-  totalScore: number
-}
-
-interface ClassItem {
-  id: string
-  name: string
-}
+import { ref, computed, onMounted } from 'vue'
 
 const submitting = ref(false)
-const today = ref('')
+const selectedClasses = ref<number[]>([])
 
-const form = reactive({
+const form = ref({
   title: '',
   description: '',
-  duration: '',
+  timeLimit: '',
   passingScore: '',
+  startTime: '',
+  endTime: ''
 })
 
-const startDate = ref('')
-const startTime = ref('')
-const endDate = ref('')
-const endTime = ref('')
+const startDateTimeIndex = ref([0, 0])
+const endDateTimeIndex = ref([0, 0])
 
-const selectedPaper = ref<PaperItem | null>(null)
-const selectedClasses = ref<ClassItem[]>([])
+interface ClassItem { id: number; name: string; studentCount: number }
+const classes = ref<ClassItem[]>([])
 
-onMounted(() => {
+const dateTimeRange = computed(() => {
+  const dates: string[] = []
   const now = new Date()
-  today.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-
-  // Listen for paper selection result
-  uni.$on('examPaperSelected', (paper: PaperItem) => {
-    selectedPaper.value = paper
-  })
-
-  // Listen for class selection result
-  uni.$on('examClassSelected', (classes: ClassItem[]) => {
-    selectedClasses.value = classes
-  })
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now)
+    d.setDate(d.getDate() + i)
+    dates.push(`${d.getMonth() + 1}月${d.getDate()}日`)
+  }
+  const times: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    }
+  }
+  return [dates, times]
 })
 
-// ---------- Date / Time Pickers ----------
+onMounted(() => { fetchClasses() })
 
-function onStartDateChange(e: any) {
-  startDate.value = e.detail.value
-  // Reset end date if it is before start date
-  if (endDate.value && endDate.value < startDate.value) {
-    endDate.value = ''
-    endTime.value = ''
+async function fetchClasses() {
+  try {
+    // TODO: replace with actual API call
+    classes.value = [
+      { id: 1, name: '数据结构2026春季班', studentCount: 45 },
+      { id: 2, name: '算法设计2026春季班', studentCount: 38 },
+      { id: 3, name: '操作系统2026春季班', studentCount: 52 }
+    ]
+  } catch (e) {
+    console.error('Failed to load classes', e)
   }
 }
 
-function onStartTimeChange(e: any) {
-  startTime.value = e.detail.value
+function onStartChange(e: any) {
+  startDateTimeIndex.value = e.detail.value
+  const dates = dateTimeRange.value[0]
+  const times = dateTimeRange.value[1]
+  form.value.startTime = `${dates[e.detail.value[0]]} ${times[e.detail.value[1]]}`
 }
 
-function onEndDateChange(e: any) {
-  endDate.value = e.detail.value
+function onEndChange(e: any) {
+  endDateTimeIndex.value = e.detail.value
+  const dates = dateTimeRange.value[0]
+  const times = dateTimeRange.value[1]
+  form.value.endTime = `${dates[e.detail.value[0]]} ${times[e.detail.value[1]]}`
 }
 
-function onEndTimeChange(e: any) {
-  endTime.value = e.detail.value
-}
-
-// ---------- Paper Selection ----------
-
-function onSelectPaper() {
-  // Navigate to paper list in select mode
-  uni.navigateTo({
-    url: '/pages/exam/paper-list?mode=select',
-  })
-}
-
-// ---------- Class Selection ----------
-
-function onSelectClasses() {
-  // Navigate to class list in select mode
-  uni.navigateTo({
-    url: '/pages/class/list?mode=select&selected=' + selectedClasses.value.map((c) => c.id).join(','),
-  })
-}
-
-function onRemoveClass(id: string) {
-  selectedClasses.value = selectedClasses.value.filter((c) => c.id !== id)
-}
-
-// ---------- Validation ----------
-
-function validate(): boolean {
-  if (!form.title.trim()) {
-    uni.showToast({ title: '请输入考试名称', icon: 'none' })
-    return false
+function toggleClass(id: number) {
+  const idx = selectedClasses.value.indexOf(id)
+  if (idx > -1) {
+    selectedClasses.value.splice(idx, 1)
+  } else {
+    selectedClasses.value.push(id)
   }
-  if (!form.duration || Number(form.duration) <= 0) {
+}
+
+async function handlePublish() {
+  if (!form.value.title.trim()) {
+    uni.showToast({ title: '请输入考试标题', icon: 'none' })
+    return
+  }
+  if (!form.value.timeLimit || Number(form.value.timeLimit) <= 0) {
     uni.showToast({ title: '请输入有效的考试时长', icon: 'none' })
-    return false
+    return
   }
-  if (!startDate.value || !startTime.value) {
-    uni.showToast({ title: '请选择开始时间', icon: 'none' })
-    return false
+  if (!form.value.passingScore) {
+    uni.showToast({ title: '请输入及格分数', icon: 'none' })
+    return
   }
-  if (!endDate.value || !endTime.value) {
-    uni.showToast({ title: '请选择结束时间', icon: 'none' })
-    return false
-  }
-  const startTs = new Date(`${startDate.value} ${startTime.value}:00`).getTime()
-  const endTs = new Date(`${endDate.value} ${endTime.value}:00`).getTime()
-  if (endTs <= startTs) {
-    uni.showToast({ title: '结束时间必须晚于开始时间', icon: 'none' })
-    return false
-  }
-  if (!selectedPaper.value) {
-    uni.showToast({ title: '请选择试卷', icon: 'none' })
-    return false
-  }
-  if (!form.passingScore || Number(form.passingScore) < 0) {
-    uni.showToast({ title: '请输入有效的及格分数', icon: 'none' })
-    return false
-  }
-  if (selectedPaper.value && Number(form.passingScore) > selectedPaper.value.totalScore) {
-    uni.showToast({ title: '及格分数不能超过总分', icon: 'none' })
-    return false
+  if (!form.value.startTime || !form.value.endTime) {
+    uni.showToast({ title: '请选择考试时间', icon: 'none' })
+    return
   }
   if (selectedClasses.value.length === 0) {
-    uni.showToast({ title: '请至少选择一个班级', icon: 'none' })
-    return false
+    uni.showToast({ title: '请选择发布班级', icon: 'none' })
+    return
   }
-  return true
-}
-
-// ---------- Submit ----------
-
-async function onSubmit() {
-  if (submitting.value) return
-  if (!validate()) return
-
   submitting.value = true
   try {
-    const startTimeStr = `${startDate.value} ${startTime.value}:00`
-    const endTimeStr = `${endDate.value} ${endTime.value}:00`
-
-    await request({
-      url: '/exam',
-      method: 'POST',
-      data: {
-        title: form.title.trim(),
-        description: form.description.trim() || undefined,
-        duration: Number(form.duration),
-        startTime: startTimeStr,
-        endTime: endTimeStr,
-        paperId: selectedPaper.value!.id,
-        passingScore: Number(form.passingScore),
-        classIds: selectedClasses.value.map((c) => Number(c.id)),
-      },
-    })
-
+    // TODO: replace with actual API call
     uni.showToast({ title: '发布成功', icon: 'success' })
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
+    setTimeout(() => uni.navigateBack(), 1500)
   } catch (e) {
+    console.error('Failed to publish exam', e)
     uni.showToast({ title: '发布失败', icon: 'none' })
   } finally {
     submitting.value = false
@@ -341,23 +181,22 @@ async function onSubmit() {
 </script>
 
 <style scoped>
-.exam-publish-page {
+.publish-page {
   min-height: 100vh;
-  background-color: #f5f6fa;
-  padding-bottom: 160rpx;
+  background-color: #f5f5f5;
+  padding: 20rpx 24rpx;
+  padding-bottom: 80rpx;
 }
 
-/* ---- Form Section ---- */
-
-.form-section {
+.form-card {
   background-color: #fff;
-  margin: 20rpx 24rpx;
   border-radius: 16rpx;
-  overflow: hidden;
+  padding: 12rpx 30rpx;
+  margin-bottom: 40rpx;
 }
 
 .form-item {
-  padding: 24rpx 28rpx;
+  padding: 28rpx 0;
   border-bottom: 1rpx solid #f5f5f5;
 }
 
@@ -366,257 +205,104 @@ async function onSubmit() {
 }
 
 .form-label {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16rpx;
-  display: block;
-}
-
-.form-label.required::before {
-  content: '*';
-  color: #ff4d4f;
-  margin-right: 4rpx;
-}
-
-.input-wrap {
-  border: 2rpx solid #e0e0e0;
-  border-radius: 12rpx;
-  padding: 0 20rpx;
-  height: 80rpx;
-}
-
-.input-row {
-  display: flex;
-  align-items: center;
-}
-
-.input-row .form-input {
-  flex: 1;
-}
-
-.input-suffix {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #999;
-  margin-left: 12rpx;
-  flex-shrink: 0;
+  margin-bottom: 16rpx;
 }
 
 .form-input {
-  width: 100%;
-  height: 80rpx;
-  font-size: 28rpx;
-}
-
-.textarea-wrap {
-  border: 2rpx solid #e0e0e0;
-  border-radius: 12rpx;
-  padding: 16rpx 20rpx;
-  min-height: 160rpx;
+  font-size: 30rpx;
+  color: #333;
+  padding: 8rpx 0;
 }
 
 .form-textarea {
   width: 100%;
-  font-size: 28rpx;
-  line-height: 1.6;
-}
-
-.char-count {
-  font-size: 22rpx;
-  color: #ccc;
-  text-align: right;
-  margin-top: 8rpx;
-  display: block;
-}
-
-.form-hint {
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 8rpx;
-  display: block;
-}
-
-.picker-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #f5f5f5;
-}
-
-.picker-row:last-child {
-  border-bottom: none;
-}
-
-.picker-value {
+  height: 160rpx;
   font-size: 28rpx;
   color: #333;
+  padding: 16rpx;
+  background-color: #f9f9f9;
+  border-radius: 12rpx;
 }
 
-.picker-value.placeholder {
-  color: #ccc;
+.picker-display {
+  font-size: 28rpx;
+  color: #666;
+  padding: 8rpx 0;
 }
 
-.picker-arrow {
-  font-size: 24rpx;
-  color: #ccc;
+.class-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 8rpx;
 }
 
-/* ---- Section Header ---- */
+.class-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background-color: #f9f9f9;
+  border-radius: 12rpx;
+  border: 2rpx solid transparent;
+}
 
-.section-header {
+.class-item.selected {
+  border-color: #4a90d9;
+  background-color: #f0f7ff;
+}
+
+.checkbox {
+  width: 36rpx;
+  height: 36rpx;
+  border: 2rpx solid #ddd;
+  border-radius: 8rpx;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 24rpx 32rpx 12rpx;
+  justify-content: center;
+  margin-right: 16rpx;
 }
 
-.section-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #333;
+.checkbox.checked {
+  background-color: #4a90d9;
+  border-color: #4a90d9;
 }
 
-.required-label::before {
-  content: '*';
-  color: #ff4d4f;
-  margin-right: 4rpx;
+.check-mark {
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 700;
 }
 
-.section-action {
-  padding: 8rpx 20rpx;
-  background-color: #e8f3ff;
-  border-radius: 24rpx;
-}
-
-.section-action-text {
-  font-size: 24rpx;
-  color: #1677ff;
-}
-
-/* ---- Paper Card ---- */
-
-.paper-card {
-  margin: 0 24rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-}
-
-.paper-info {
+.class-name {
   flex: 1;
-  min-width: 0;
-}
-
-.paper-name {
   font-size: 28rpx;
-  font-weight: 600;
   color: #333;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.paper-meta {
-  display: flex;
-  align-items: center;
-  margin-top: 8rpx;
-}
-
-.paper-meta-item {
+.class-count {
   font-size: 24rpx;
-  color: #999;
-}
-
-.paper-meta-divider {
-  font-size: 24rpx;
-  color: #e0e0e0;
-  margin: 0 12rpx;
-}
-
-.paper-change {
-  font-size: 24rpx;
-  color: #1677ff;
-  padding: 8rpx 16rpx;
-  flex-shrink: 0;
-}
-
-.empty-paper {
-  padding: 40rpx 24rpx;
-  text-align: center;
-}
-
-.empty-hint {
-  font-size: 28rpx;
-  color: #ccc;
-}
-
-/* ---- Class Tags ---- */
-
-.class-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  padding: 0 24rpx 20rpx;
-}
-
-.class-tag {
-  display: flex;
-  align-items: center;
-  background: #e8f3ff;
-  border-radius: 24rpx;
-  padding: 10rpx 20rpx;
-}
-
-.class-tag-name {
-  font-size: 24rpx;
-  color: #1677ff;
-  margin-right: 8rpx;
-}
-
-.class-tag-remove {
-  font-size: 24rpx;
-  color: #999;
-  padding: 0 4rpx;
-}
-
-.empty-classes {
-  padding: 40rpx 24rpx;
-  text-align: center;
-}
-
-/* ---- Submit ---- */
-
-.submit-section {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 20rpx 32rpx;
-  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  background-color: #fff;
-  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+  color: #bbb;
 }
 
 .submit-btn {
-  background-color: #1677ff;
+  background-color: #4a90d9;
   border-radius: 44rpx;
-  padding: 24rpx 0;
-  text-align: center;
+  padding: 26rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .submit-btn.disabled {
   opacity: 0.6;
 }
 
-.submit-btn-text {
+.submit-text {
   font-size: 30rpx;
-  font-weight: 600;
   color: #fff;
+  font-weight: 600;
 }
 </style>

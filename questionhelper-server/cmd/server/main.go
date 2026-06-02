@@ -34,7 +34,7 @@ func main() {
 	database.InitMySQL(cfg.MySQL)
 	database.InitRedis(cfg.Redis)
 
-	jwt.Init(cfg.JWT.Secret)
+	jwt.Init(cfg.JWT.Secret, cfg.Auth.JWTIssuer)
 
 	// 初始化文件存储
 	if err := file.Init(cfg.OSS); err != nil {
