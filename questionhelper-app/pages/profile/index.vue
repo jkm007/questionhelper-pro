@@ -30,6 +30,16 @@
         <text class="menu-label">My Statistics</text>
         <image class="menu-arrow" src="/static/icon-arrow-right.png" mode="aspectFit" />
       </view>
+      <view class="menu-item" @tap="goTo('/pages/profile/learning-report')">
+        <image class="menu-icon" src="/static/icon-statistics.png" mode="aspectFit" />
+        <text class="menu-label">Learning Report</text>
+        <image class="menu-arrow" src="/static/icon-arrow-right.png" mode="aspectFit" />
+      </view>
+      <view class="menu-item" @tap="goTo('/pages/profile/learning-plan')">
+        <image class="menu-icon" src="/static/icon-creation.png" mode="aspectFit" />
+        <text class="menu-label">Learning Plan</text>
+        <image class="menu-arrow" src="/static/icon-arrow-right.png" mode="aspectFit" />
+      </view>
       <view class="menu-item" @tap="goTo('/pages/profile/favorites')">
         <image class="menu-icon" src="/static/icon-favorite.png" mode="aspectFit" />
         <text class="menu-label">My Favorites</text>
@@ -64,9 +74,19 @@
         </view>
         <image class="menu-arrow" src="/static/icon-arrow-right.png" mode="aspectFit" />
       </view>
+      <view class="menu-item" @tap="goTo('/pages/profile/apply-teacher')">
+        <image class="menu-icon" src="/static/icon-class.png" mode="aspectFit" />
+        <text class="menu-label">Apply Teacher</text>
+        <image class="menu-arrow" src="/static/icon-arrow-right.png" mode="aspectFit" />
+      </view>
     </view>
 
     <view class="menu-group">
+      <view class="menu-item" @tap="goTo('/pages/profile/change-password')">
+        <image class="menu-icon" src="/static/icon-auth.png" mode="aspectFit" />
+        <text class="menu-label">Change Password</text>
+        <image class="menu-arrow" src="/static/icon-arrow-right.png" mode="aspectFit" />
+      </view>
       <view class="menu-item" @tap="goTo('/pages/profile/settings')">
         <image class="menu-icon" src="/static/icon-settings.png" mode="aspectFit" />
         <text class="menu-label">Settings</text>

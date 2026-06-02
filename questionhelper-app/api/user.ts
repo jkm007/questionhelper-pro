@@ -119,3 +119,54 @@ export const getPrivacy = () => {
 export const updatePrivacy = (data: any) => {
   return request({ url: '/user/privacy', method: 'PUT', data })
 }
+
+// 获取教师申请状态
+export const getTeacherStatus = () => {
+  return request({ url: '/user/teacher/status' })
+}
+
+// 提交教师申请
+export const submitTeacherApply = (data: {
+  reason: string
+  qualifications: string
+  school: string
+  subject: string
+  certificates?: string[]
+}) => {
+  return request({ url: '/user/teacher/apply', method: 'POST', data })
+}
+
+// 获取学习报告
+export const getLearningReport = (params?: { period?: number }) => {
+  return request({ url: '/statistics/learning-report', data: params })
+}
+
+// 获取学习计划
+export const getLearningPlan = () => {
+  return request({ url: '/user/learning-plan' })
+}
+
+// 创建学习计划
+export const createLearningPlan = (data: any) => {
+  return request({ url: '/user/learning-plan', method: 'POST', data })
+}
+
+// 更新学习计划
+export const updateLearningPlan = (data: any) => {
+  return request({ url: '/user/learning-plan', method: 'PUT', data })
+}
+
+// 添加学习计划项
+export const addPlanItem = (data: any) => {
+  return request({ url: '/user/learning-plan/items', method: 'POST', data })
+}
+
+// 更新学习计划项
+export const updatePlanItem = (id: number, data: any) => {
+  return request({ url: `/user/learning-plan/items/${id}`, method: 'PUT', data })
+}
+
+// 删除学习计划项
+export const deletePlanItem = (id: number) => {
+  return request({ url: `/user/learning-plan/items/${id}`, method: 'DELETE' })
+}

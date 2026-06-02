@@ -80,9 +80,38 @@ export const getClassHomeworkList = (id: number, params?: { page?: number; pageS
   return request({ url: `/classes/${id}/homework`, data: params })
 }
 
-// 提交作业
-export const submitHomework = (classId: number, homeworkId: number, data: { content: string; attachments?: string[] }) => {
+// 创建作业（教师）
+export const createHomework = (classId: number | string, data: {
+  title: string
+  description?: string
+  deadline: string
+  questionIds: number[]
+  attachments?: string[]
+}) => {
+  return request({ url: `/classes/${classId}/homework`, method: 'POST', data })
+}
+
+// 作业详情
+export const getHomeworkDetail = (classId: number | string, homeworkId: number | string) => {
+  return request({ url: `/classes/${classId}/homework/${homeworkId}` })
+}
+
+// 提交作业（学生）
+export const submitHomework = (classId: number | string, homeworkId: number | string, data: {
+  content: string
+  attachments?: string[]
+}) => {
   return request({ url: `/classes/${classId}/homework/${homeworkId}/submit`, method: 'POST', data })
+}
+
+// 作业提交详情（学生查看自己的提交）
+export const getHomeworkSubmit = (classId: number | string, homeworkId: number | string) => {
+  return request({ url: `/classes/${classId}/homework/${homeworkId}/submit` })
+}
+
+// 作业结果（批改结果）
+export const getHomeworkResult = (classId: number | string, homeworkId: number | string) => {
+  return request({ url: `/classes/${classId}/homework/${homeworkId}/result` })
 }
 
 // 更新成员角色
@@ -103,4 +132,71 @@ export const getClassNoticeList = (id: number, params?: { page?: number; pageSiz
 // 标记公告已读
 export const markNoticeRead = (classId: number, noticeId: number) => {
   return request({ url: `/classes/${classId}/notice/${noticeId}/read`, method: 'PUT' })
+}
+
+// ========== 考勤 Attendance ==========
+
+// 考勤会话列表
+export const getAttendanceSessions = (classId: number | string, params?: { page?: number; pageSize?: number }) => {
+  return request({ url: `/classes/${classId}/attendance/sessions`, data: params })
+}
+
+// 考勤会话签到记录
+export const getAttendanceRecords = (classId: number | string, sessionId: number | string) => {
+  return request({ url: `/classes/${classId}/attendance/sessions/${sessionId}/records` })
+}
+
+// 创建考勤会话（教师）
+export const createAttendanceSession = (classId: number | string, data: {
+  title: string
+  deadlineTime?: string
+  duration?: number
+  remark?: string
+}) => {
+  return request({ url: `/classes/${classId}/attendance/sessions`, method: 'POST', data })
+}
+
+// 学生签到
+export const studentCheckIn = (classId: number | string, sessionId: number | string) => {
+  return request({ url: `/classes/${classId}/attendance/sessions/${sessionId}/checkin`, method: 'POST' })
+}
+
+// 导出考勤记录
+export const exportAttendance = (classId: number | string, sessionId: number | string) => {
+  return request({ url: `/classes/${classId}/attendance/sessions/${sessionId}/export` })
+}
+
+// 考勤日历数据
+export const getAttendanceCalendar = (classId: number | string, params: { year: number; month: number }) => {
+  return request({ url: `/classes/${classId}/attendance/calendar`, data: params })
+}
+
+// ========== 教师审批 Teacher Approval ==========
+
+// 获取加入申请列表
+export const getClassApplications = (classId: number | string, params?: {
+  page?: number
+  pageSize?: number
+  status?: string
+}) => {
+  return request({ url: `/classes/${classId}/applications`, data: params })
+}
+
+// 通过加入申请
+export const approveApplication = (classId: number | string, applicationId: number | string) => {
+  return request({ url: `/classes/${classId}/applications/${applicationId}/approve`, method: 'POST' })
+}
+
+// 拒绝加入申请
+export const rejectApplication = (classId: number | string, applicationId: number | string, data: {
+  reason?: string
+}) => {
+  return request({ url: `/classes/${classId}/applications/${applicationId}/reject`, method: 'POST', data })
+}
+
+// 批量通过加入申请
+export const batchApproveApplications = (classId: number | string, data: {
+  ids: string[]
+}) => {
+  return request({ url: `/classes/${classId}/applications/batch-approve`, method: 'POST', data })
 }

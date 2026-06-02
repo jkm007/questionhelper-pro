@@ -92,8 +92,12 @@ type LimitConfig struct {
 }
 
 type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
+	Level      string `yaml:"level"`
+	Format     string `yaml:"format"`
+	Output     string `yaml:"output"`      // 日志文件路径，留空输出到 stdout
+	MaxSize    int    `yaml:"max_size"`     // 单个日志文件最大尺寸 (MB)
+	MaxBackups int    `yaml:"max_backups"`  // 保留旧日志文件最大数量
+	MaxAge     int    `yaml:"max_age"`      // 保留旧日志文件最大天数
 }
 
 type OSSConfig struct {
@@ -228,5 +232,16 @@ func setDefaults(cfg *Config) {
 	// SMS 默认值
 	if cfg.SMS.Provider == "" {
 		cfg.SMS.Provider = "mock"
+	}
+
+	// Log 默认值
+	if cfg.Log.MaxSize == 0 {
+		cfg.Log.MaxSize = 100 // 100MB
+	}
+	if cfg.Log.MaxBackups == 0 {
+		cfg.Log.MaxBackups = 5
+	}
+	if cfg.Log.MaxAge == 0 {
+		cfg.Log.MaxAge = 30 // 30天
 	}
 }

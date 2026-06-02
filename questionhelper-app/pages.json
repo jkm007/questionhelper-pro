@@ -100,6 +100,19 @@
       }
     },
     {
+      "path": "pages/exam/ranking",
+      "style": {
+        "navigationBarTitleText": "成绩排名",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/exam/publish",
+      "style": {
+        "navigationBarTitleText": "发布考试"
+      }
+    },
+    {
       "path": "pages/wrong/list",
       "style": {
         "navigationBarTitleText": "错题本"
@@ -115,6 +128,12 @@
       "path": "pages/wrong/analysis",
       "style": {
         "navigationBarTitleText": "错题分析"
+      }
+    },
+    {
+      "path": "pages/wrong/export",
+      "style": {
+        "navigationBarTitleText": "错题导出"
       }
     },
     {
@@ -154,15 +173,69 @@
       }
     },
     {
+      "path": "pages/class/homework-create",
+      "style": {
+        "navigationBarTitleText": "布置作业"
+      }
+    },
+    {
+      "path": "pages/class/homework-submit",
+      "style": {
+        "navigationBarTitleText": "提交作业"
+      }
+    },
+    {
+      "path": "pages/class/homework-result",
+      "style": {
+        "navigationBarTitleText": "作业结果"
+      }
+    },
+    {
       "path": "pages/class/notice",
       "style": {
         "navigationBarTitleText": "班级公告"
       }
     },
     {
+      "path": "pages/class/class-notice",
+      "style": {
+        "navigationBarTitleText": "班级通知"
+      }
+    },
+    {
+      "path": "pages/class/discussion",
+      "style": {
+        "navigationBarTitleText": "班级讨论"
+      }
+    },
+    {
+      "path": "pages/class/discussion-detail",
+      "style": {
+        "navigationBarTitleText": "讨论详情"
+      }
+    },
+    {
+      "path": "pages/class/resource",
+      "style": {
+        "navigationBarTitleText": "班级资源"
+      }
+    },
+    {
+      "path": "pages/class/attendance",
+      "style": {
+        "navigationBarTitleText": "考勤管理"
+      }
+    },
+    {
       "path": "pages/class/create",
       "style": {
         "navigationBarTitleText": "创建班级"
+      }
+    },
+    {
+      "path": "pages/class/teacher-approval",
+      "style": {
+        "navigationBarTitleText": "教师审批"
       }
     },
     {
@@ -227,6 +300,30 @@
       }
     },
     {
+      "path": "pages/profile/learning-report",
+      "style": {
+        "navigationBarTitleText": "学习报告"
+      }
+    },
+    {
+      "path": "pages/profile/learning-plan",
+      "style": {
+        "navigationBarTitleText": "学习计划"
+      }
+    },
+    {
+      "path": "pages/profile/change-password",
+      "style": {
+        "navigationBarTitleText": "修改密码"
+      }
+    },
+    {
+      "path": "pages/profile/apply-teacher",
+      "style": {
+        "navigationBarTitleText": "申请教师"
+      }
+    },
+    {
       "path": "pages/profile/settings",
       "style": {
         "navigationBarTitleText": "设置"
@@ -245,6 +342,12 @@
       }
     },
     {
+      "path": "pages/notification/settings",
+      "style": {
+        "navigationBarTitleText": "通知设置"
+      }
+    },
+    {
       "path": "pages/feedback/exam",
       "style": {
         "navigationBarTitleText": "考试反馈"
@@ -260,6 +363,19 @@
       "path": "pages/statistics/index",
       "style": {
         "navigationBarTitleText": "数据统计"
+      }
+    },
+    {
+      "path": "pages/common/error",
+      "style": {
+        "navigationBarTitleText": "出错了",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/common/about",
+      "style": {
+        "navigationBarTitleText": "关于"
       }
     },
     {

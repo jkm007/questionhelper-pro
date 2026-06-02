@@ -63,3 +63,22 @@ export const submitExamAnswers = submitExam
 export const saveExamProgress = (id: number, data: { answers: any[]; currentQuestion?: number }) => {
   return request({ url: `/exam/${id}/save-answer`, method: 'POST', data })
 }
+
+// 考试排名
+export const getExamRanking = (id: number | string, params?: { page?: number; pageSize?: number }) => {
+  return request({ url: `/exam/${id}/ranking`, data: params })
+}
+
+// 发布考试（教师）
+export const publishExam = (data: {
+  title: string
+  description?: string
+  duration: number
+  startTime: string
+  endTime: string
+  paperId: number | string
+  passingScore: number
+  classIds: number[]
+}) => {
+  return request({ url: '/exam', method: 'POST', data })
+}

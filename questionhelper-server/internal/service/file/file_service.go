@@ -1,6 +1,8 @@
 package file
 
 import (
+	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
@@ -18,7 +20,9 @@ import (
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	fileRepo "questionhelper-server/internal/repository/file"
+	"questionhelper-server/pkg/config"
 	"questionhelper-server/pkg/logger"
+	"questionhelper-server/pkg/upload"
 )
 
 const (
@@ -56,6 +60,19 @@ var audioExtensions = map[string]bool{
 	".mp3": true,
 }
 
+// storage 全局存储实例，通过 Init 初始化
+var storage upload.Storage
+
+// Init 初始化文件存储（在 main.go 中调用）
+func Init(cfg config.OSSConfig) error {
+	s, err := upload.NewStorage(cfg)
+	if err != nil {
+		return fmt.Errorf("初始化文件存储失败: %w", err)
+	}
+	storage = s
+	return nil
+}
+
 // ==================== Basic Upload ====================
 
 // UploadFile 上传文件
@@ -78,39 +95,37 @@ func UploadFile(uploaderID uint, fileName string, fileSize int64, fileType strin
 
 	// 使用UUID生成安全的文件名，避免路径遍历
 	newFileName := uuid.New().String() + ext
-	filePath := filepath.Clean(filepath.Join(uploadDir, newFileName))
 
-	// 保存文件
-	dst, err := os.Create(filePath)
+	// 读取文件内容用于 MD5 计算和存储
+	buf, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, fmt.Errorf("创建文件失败: %w", err)
+		return nil, fmt.Errorf("读取文件失败: %w", err)
 	}
-	defer dst.Close()
 
-	// 计算MD5并保存
-	hash := md5.New()
-	writer := io.MultiWriter(dst, hash)
-
-	if _, err := io.Copy(writer, reader); err != nil {
-		return nil, fmt.Errorf("保存文件失败: %w", err)
-	}
-	md5Hash := hex.EncodeToString(hash.Sum(nil))
+	// 计算 MD5
+	hash := md5.Sum(buf)
+	md5Hash := hex.EncodeToString(hash[:])
 
 	// 检查MD5去重
 	existing, err := fileRepo.FindFileByMD5(md5Hash)
 	if err == nil && existing != nil {
-		// 文件已存在，删除刚保存的文件
-		os.Remove(filePath)
 		logger.Infof("文件已存在(MD5去重): %s -> %s", fileName, existing.Name)
 		return existing, nil
+	}
+
+	// 通过 Storage 保存文件
+	ctx := context.Background()
+	fileURL, err := storage.Save(ctx, newFileName, bytes.NewReader(buf), fileSize, fileType)
+	if err != nil {
+		return nil, fmt.Errorf("保存文件失败: %w", err)
 	}
 
 	// 保存文件信息到数据库
 	file := &model.File{
 		Name:       newFileName,
 		Original:   fileName,
-		Path:       filePath,
-		URL:        "/uploads/" + newFileName,
+		Path:       fileURL,
+		URL:        fileURL,
 		Size:       fileSize,
 		Type:       fileType,
 		Extension:  ext,

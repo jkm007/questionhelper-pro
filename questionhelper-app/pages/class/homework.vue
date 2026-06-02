@@ -157,13 +157,13 @@ function onLoadMore() {
 
 function onSubmit(hw: HomeworkItem) {
   uni.navigateTo({
-    url: `/pages/homework/submit?homeworkId=${hw.id}&classId=${classId.value}`
+    url: `/pages/class/homework-submit?homeworkId=${hw.id}&classId=${classId.value}`
   })
 }
 
 function onViewResult(hw: HomeworkItem) {
   uni.navigateTo({
-    url: `/pages/homework/result?homeworkId=${hw.id}&classId=${classId.value}`
+    url: `/pages/class/homework-result?homeworkId=${hw.id}&classId=${classId.value}`
   })
 }
 

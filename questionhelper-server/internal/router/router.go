@@ -19,10 +19,11 @@ import (
 	"questionhelper-server/internal/controller/user"
 	"questionhelper-server/internal/controller/wrong"
 	"questionhelper-server/internal/middleware"
+	"questionhelper-server/internal/ws"
 	"questionhelper-server/pkg/config"
 )
 
-func Setup(cfg *config.Config) *gin.Engine {
+func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(middleware.CorsMiddleware())
@@ -31,6 +32,12 @@ func Setup(cfg *config.Config) *gin.Engine {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	// 静态文件服务 —— 上传文件可通过 /uploads/xxx 访问
+	r.Static("/uploads", "./uploads")
+
+	// WebSocket 端点（JWT 认证通过 query token 参数完成）
+	r.GET("/ws", ws.HandleWebSocket(hub))
 
 	// 创建控制器
 	authCtrl := auth.NewAuthController(&cfg.JWT)

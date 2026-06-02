@@ -8,6 +8,8 @@ import (
 	"syscall"
 
 	"questionhelper-server/internal/router"
+	"questionhelper-server/internal/service/file"
+	"questionhelper-server/internal/ws"
 	"questionhelper-server/pkg/config"
 	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/email"
@@ -30,6 +32,16 @@ func main() {
 
 	jwt.Init(cfg.JWT.Secret)
 
+	// 初始化文件存储
+	if err := file.Init(cfg.OSS); err != nil {
+		logger.Warnf("文件存储初始化失败，使用本地存储: %v", err)
+	}
+
+	// 初始化 WebSocket Hub
+	hub := ws.NewHub()
+	go hub.Run()
+	logger.Info("WebSocket Hub 已启动")
+
 	// 将 config.EmailConfig 转换为 email.EmailConfig
 	email.Init(&email.EmailConfig{
 		SMTPHost:    cfg.Email.SMTPHost,
@@ -49,7 +61,7 @@ func main() {
 		TemplateCode: cfg.SMS.TemplateCode,
 	})
 
-	r := router.Setup(cfg)
+	r := router.Setup(cfg, hub)
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	go func() {
