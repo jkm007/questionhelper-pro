@@ -51,7 +51,7 @@ func (ctrl *MonitorController) GetExamMonitor(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  dto.ExportScoresResponse  "成功"
+// @Success      200  {array}  dto.ExamRecordInfo  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/exams/{id}/scores/export [get]
@@ -115,7 +115,7 @@ func (ctrl *MonitorController) ReviewExam(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  response.Response{data=dto.ExamAnalysisInfo}  "成功"
+// @Success      200  {object}  response.Response{data=dto.ExamAnalysisResponse}  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/exams/{id}/analysis [get]

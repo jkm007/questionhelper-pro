@@ -11,6 +11,7 @@ import (
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	classRepo "questionhelper-server/internal/repository/class"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -142,6 +143,61 @@ func DeleteClass(id, operatorID uint, isAdmin bool) error {
 	// 系统管理员可跳过权限检查；否则只有创建者才能删除班级
 	if !isAdmin && class.CreatorID != operatorID {
 		return errors.New("只有创建者才能删除班级")
+	}
+
+	// 保护规则1: 检查班级成员数（除创建者外）
+	var memberCount int64
+	if err := database.DB.Model(&model.ClassMember{}).
+		Where("class_id = ? AND user_id != ?", id, class.CreatorID).
+		Count(&memberCount).Error; err != nil {
+		return fmt.Errorf("查询班级成员失败: %w", err)
+	}
+	if memberCount > 0 {
+		return fmt.Errorf("班级仍有 %d 名成员，请先移除所有成员", memberCount)
+	}
+
+	// 保护规则2: 检查是否有进行中的考试
+	var activeExamCount int64
+	if err := database.DB.Model(&model.Exam{}).
+		Where("class_id = ? AND status = 1", id).
+		Count(&activeExamCount).Error; err != nil {
+		return fmt.Errorf("查询班级考试失败: %w", err)
+	}
+	if activeExamCount > 0 {
+		return errors.New("班级有进行中的考试，请先结束所有考试")
+	}
+
+	// 保护规则3: 检查是否有考试记录
+	var examRecordCount int64
+	if err := database.DB.Model(&model.ExamRecord{}).
+		Where("exam_id IN (SELECT id FROM exams WHERE class_id = ?)", id).
+		Count(&examRecordCount).Error; err != nil {
+		return fmt.Errorf("查询考试记录失败: %w", err)
+	}
+	if examRecordCount > 0 {
+		return errors.New("班级有考试记录，请先清理考试记录")
+	}
+
+	// 保护规则4: 检查是否有班级资源
+	var resourceCount int64
+	if err := database.DB.Model(&model.ClassResourceVersion{}).
+		Where("resource_id = ?", id).
+		Count(&resourceCount).Error; err != nil {
+		return fmt.Errorf("查询班级资源失败: %w", err)
+	}
+	if resourceCount > 0 {
+		return errors.New("班级有教学资源，请先清理班级资源")
+	}
+
+	// 保护规则5: 检查是否有未完成的作业
+	var incompleteHwCount int64
+	if err := database.DB.Model(&model.Homework{}).
+		Where("class_id = ? AND deadline > ?", id, time.Now()).
+		Count(&incompleteHwCount).Error; err != nil {
+		return fmt.Errorf("查询作业失败: %w", err)
+	}
+	if incompleteHwCount > 0 {
+		return errors.New("班级有未过截止时间的作业，请先处理作业")
 	}
 
 	if err := classRepo.DeleteByID(id); err != nil {

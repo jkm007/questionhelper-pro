@@ -311,19 +311,54 @@ func Register(req *dto.RegisterRequest, cfg *config.JWTConfig) (*dto.LoginRespon
 		logger.Errorf("保存密码历史失败: %v", err)
 	}
 
+	// 分配默认角色
+	var roleIDs []uint
+	var roleCodes []string
+	defaultRoles, err := findDefaultRoles()
+	if err != nil {
+		logger.Errorf("查询默认角色失败: %v", err)
+	} else if len(defaultRoles) > 0 {
+		for _, role := range defaultRoles {
+			if err := assignUserRole(u.ID, role.ID); err != nil {
+				logger.Errorf("分配默认角色失败: user_id=%d, role_id=%d, err=%v", u.ID, role.ID, err)
+			} else {
+				roleIDs = append(roleIDs, role.ID)
+				roleCodes = append(roleCodes, role.Code)
+			}
+		}
+	}
+
 	logger.Infof("用户注册成功: %s", req.Username)
+
+	// 记录安全日志和设备信息
+	recordSecurityLog(u.ID, "register", "用户注册成功", req.DeviceInfo)
+	recordDevice(u.ID, &dto.LoginRequest{
+		DeviceID:   req.DeviceID,
+		DeviceInfo: req.DeviceInfo,
+		UserAgent:  req.UserAgent,
+	}, "")
 
 	// T07: 注册后自动登录，返回 Token（T28: 添加 type 字段区分 token 类型）
 	jti := jwt.GenerateJTI()
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, nil, jti, cfg.Expire, "access")
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, cfg.Expire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, nil, refreshJTI, cfg.RefreshExpire, "refresh")
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, cfg.RefreshExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
+	}
+
+	// 构建角色信息
+	roleInfos := make([]dto.RoleInfo, 0, len(defaultRoles))
+	for _, role := range defaultRoles {
+		roleInfos = append(roleInfos, dto.RoleInfo{
+			ID:   role.ID,
+			Name: role.Name,
+			Code: role.Code,
+		})
 	}
 
 	return &dto.LoginResponse{
@@ -335,6 +370,7 @@ func Register(req *dto.RegisterRequest, cfg *config.JWTConfig) (*dto.LoginRespon
 			ID:        u.ID,
 			Username:  u.Username,
 			Nickname:  nickname,
+			Roles:     roleInfos,
 			CreatedAt: u.CreatedAt,
 		},
 	}, nil
@@ -359,11 +395,41 @@ func Logout(tokenString string) error {
 }
 
 // SendEmailCode 发送邮箱验证码
-func SendEmailCode(emailAddr string) error {
+func SendEmailCode(emailAddr string, clientIP string) error {
 	ctx := context.Background()
-	limitKey := key.EmailLimitKey(emailAddr)
+
+	// 检查每日发送上限
+	dailyKey := key.EmailDailyKey(emailAddr)
+	dailyCount, err := database.RDB.Incr(ctx, dailyKey).Result()
+	if err != nil {
+		logger.Errorf("检查每日发送次数失败: %v", err)
+	} else {
+		if dailyCount == 1 {
+			database.RDB.Expire(ctx, dailyKey, key.DailyLimitExpire())
+		}
+		if dailyCount > int64(key.MaxEmailDaily) {
+			return errors.New("今日发送次数已达上限")
+		}
+	}
+
+	// 检查 IP 每小时发送上限
+	if clientIP != "" {
+		ipKey := key.EmailIPKey(clientIP)
+		ipCount, err := database.RDB.Incr(ctx, ipKey).Result()
+		if err != nil {
+			logger.Errorf("检查 IP 发送次数失败: %v", err)
+		} else {
+			if ipCount == 1 {
+				database.RDB.Expire(ctx, ipKey, key.EmailIPLimitExpire)
+			}
+			if ipCount > int64(key.MaxEmailIPHourly) {
+				return errors.New("当前 IP 发送过于频繁，请稍后再试")
+			}
+		}
+	}
 
 	// 检查发送频率限制（1分钟内不能重复发送）
+	limitKey := key.EmailLimitKey(emailAddr)
 	exists, err := database.RDB.Exists(ctx, limitKey).Result()
 	if err != nil {
 		return fmt.Errorf("检查发送频率失败: %w", err)
@@ -399,9 +465,23 @@ func SendEmailCode(emailAddr string) error {
 // SendSmsCode 发送短信验证码
 func SendSmsCode(phone string) error {
 	ctx := context.Background()
-	limitKey := key.SmsLimitKey(phone)
+
+	// 检查每日发送上限
+	dailyKey := key.SmsDailyKey(phone)
+	dailyCount, err := database.RDB.Incr(ctx, dailyKey).Result()
+	if err != nil {
+		logger.Errorf("检查每日发送次数失败: %v", err)
+	} else {
+		if dailyCount == 1 {
+			database.RDB.Expire(ctx, dailyKey, key.DailyLimitExpire())
+		}
+		if dailyCount > int64(key.MaxSmsDaily) {
+			return errors.New("今日发送次数已达上限")
+		}
+	}
 
 	// 检查发送频率限制（60秒内不能重复发送）
+	limitKey := key.SmsLimitKey(phone)
 	exists, err := database.RDB.Exists(ctx, limitKey).Result()
 	if err != nil {
 		return fmt.Errorf("检查发送频率失败: %w", err)
@@ -484,11 +564,30 @@ func verifyEmailCode(email, code string) error {
 	if err != nil {
 		return errors.New("验证码已过期或不存在")
 	}
+
+	// 检查验证尝试次数
+	attemptsKey := key.EmailAttemptsKey(email, code)
+	attempts, err := database.RDB.Incr(ctx, attemptsKey).Result()
+	if err != nil {
+		logger.Errorf("检查验证尝试次数失败: %v", err)
+	} else {
+		if attempts == 1 {
+			database.RDB.Expire(ctx, attemptsKey, key.CodeExpire*time.Second)
+		}
+		if attempts > int64(key.MaxEmailCodeAttempts) {
+			// 超过尝试次数，删除验证码
+			database.RDB.Del(ctx, codeKey)
+			database.RDB.Del(ctx, attemptsKey)
+			return errors.New("验证码错误次数过多，请重新获取")
+		}
+	}
+
 	if storedCode != code {
 		return errors.New("验证码错误")
 	}
-	// 验证通过后删除验证码（单次有效）
+	// 验证通过后删除验证码和尝试次数（单次有效）
 	database.RDB.Del(ctx, codeKey)
+	database.RDB.Del(ctx, attemptsKey)
 	return nil
 }
 
@@ -825,6 +924,16 @@ func recordDevice(userID uint, req *dto.LoginRequest, jti string) {
 
 	if err := user.CreateDevice(device); err != nil {
 		logger.Errorf("记录登录设备失败: %v", err)
+		return
+	}
+
+	// 将同一用户其他设备的 is_current 设为 false
+	if device.ID > 0 {
+		if err := database.DB.Model(&model.LoginDevice{}).
+			Where("user_id = ? AND id != ?", userID, device.ID).
+			Update("is_current", false).Error; err != nil {
+			logger.Errorf("更新其他设备状态失败: %v", err)
+		}
 	}
 }
 
@@ -841,6 +950,18 @@ func savePasswordHistory(userID uint, password string) error {
 func generateVerifyCode() string {
 	n, _ := crand.Int(crand.Reader, big.NewInt(1000000))
 	return fmt.Sprintf("%06d", n.Int64())
+}
+
+// findDefaultRoles 查询默认角色
+func findDefaultRoles() ([]model.Role, error) {
+	var roles []model.Role
+	err := database.DB.Where("is_default = ? AND deleted_at IS NULL", true).Find(&roles).Error
+	return roles, err
+}
+
+// assignUserRole 分配用户角色
+func assignUserRole(userID, roleID uint) error {
+	return database.DB.Exec("INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)", userID, roleID).Error
 }
 
 // buildRoleInfos 构建角色信息列表

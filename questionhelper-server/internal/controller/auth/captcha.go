@@ -139,7 +139,7 @@ func (ac *AuthController) SendEmailCode(c *gin.Context) {
 		}
 	}
 
-	if err := auth.SendEmailCode(req.Email); err != nil {
+	if err := auth.SendEmailCode(req.Email, c.ClientIP()); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}

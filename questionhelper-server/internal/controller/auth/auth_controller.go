@@ -65,7 +65,8 @@ func (ac *AuthController) Login(c *gin.Context) {
 	}
 
 	// T15: set refresh token as httpOnly cookie for web clients
-	c.SetCookie("refresh_token", result.RefreshToken, 7*24*60*60, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("refresh_token", result.RefreshToken, 7*24*60*60, "/", "", true, true)
 
 	response.Success(c, result)
 }
@@ -88,6 +89,10 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
+	// 填充设备信息
+	req.DeviceInfo = c.ClientIP()
+	req.UserAgent = c.GetHeader("User-Agent")
+
 	result, err := auth.Register(&req, ac.jwtCfg)
 	if err != nil {
 		errMsg := err.Error()
@@ -105,7 +110,8 @@ func (ac *AuthController) Register(c *gin.Context) {
 	}
 
 	// T15: set refresh token as httpOnly cookie for web clients
-	c.SetCookie("refresh_token", result.RefreshToken, 7*24*60*60, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("refresh_token", result.RefreshToken, 7*24*60*60, "/", "", true, true)
 
 	response.SuccessWithMessage(c, "注册成功", result)
 }
@@ -132,7 +138,8 @@ func (ac *AuthController) Logout(c *gin.Context) {
 	}
 
 	// T15: clear refresh token cookie on logout
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	response.SuccessWithMessage(c, "退出成功", nil)
 }
@@ -156,7 +163,8 @@ func (ac *AuthController) LogoutAll(c *gin.Context) {
 	}
 
 	// T15: clear refresh token cookie on logout all
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }
@@ -286,7 +294,8 @@ func (ac *AuthController) ConfirmDeactivate(c *gin.Context) {
 	}
 
 	// T15: clear refresh token cookie on account deactivation
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	response.SuccessWithMessage(c, "注销申请已提交，30天后将永久删除账号", nil)
 }
@@ -431,7 +440,8 @@ func (ac *AuthController) KickAllDevices(c *gin.Context) {
 	}
 
 	// T15: clear refresh token cookie when kicking all devices
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
 
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }

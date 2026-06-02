@@ -11,6 +11,8 @@ import (
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	contentRepo "questionhelper-server/internal/repository/content"
+	examRepo "questionhelper-server/internal/repository/exam"
+	questionRepo "questionhelper-server/internal/repository/question"
 	userRepo "questionhelper-server/internal/repository/user"
 	"questionhelper-server/pkg/logger"
 )
@@ -825,9 +827,8 @@ func getExamPreview(examID uint) (*dto.ContentPreviewInfo, error) {
 // ==================== 综合搜索 ====================
 
 // Search 综合搜索
-func Search(req *dto.SearchRequest) ([]dto.SearchResultInfo, int64, error) {
+func Search(userID uint, req *dto.SearchRequest) ([]dto.SearchResultInfo, int64, error) {
 	// 记录搜索日志
-	userID := uint(0) // 从上下文获取
 	searchLog := &model.ContentSearchLog{
 		UserID:    userID,
 		Keyword:   req.Keyword,
@@ -1073,6 +1074,22 @@ func ApproveReview(reviewerID uint, id uint, req *dto.ApproveReviewRequest) erro
 		Message:    "您的内容已通过审核",
 	}
 	contentRepo.CreateReviewNotification(notification)
+
+	// 审核通过后更新内容状态为已发布（status=1）
+	switch instance.ContentType {
+	case "question":
+		question, err := questionRepo.FindByID(instance.ContentID)
+		if err == nil {
+			question.Status = 1 // 已发布
+			questionRepo.Update(question)
+		}
+	case "exam":
+		exam, err := examRepo.FindExamByID(instance.ContentID)
+		if err == nil {
+			exam.Status = 1 // 已发布
+			examRepo.UpdateExam(exam)
+		}
+	}
 
 	logger.Infof("审核人 %d 通过审核 %d", reviewerID, id)
 	return nil

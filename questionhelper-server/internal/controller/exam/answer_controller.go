@@ -89,7 +89,7 @@ func (ctrl *AnswerController) SaveAnswers(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  response.Response{data=[]dto.StandardAnswerInfo}  "成功"
+// @Success      200  {object}  response.Response{data=[]dto.StandardAnswer}  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /exam/{id}/standard-answers [get]
@@ -151,7 +151,7 @@ func (ctrl *AnswerController) MarkQuestion(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        recordId  path      uint  true  "考试记录ID"
-// @Success      200  {object}  response.Response{data=[]dto.MarkedQuestionInfo}  "成功"
+// @Success      200  {object}  response.Response{data=[]dto.SaveAnswerRequest}  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试记录ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /exam-records/{recordId}/marked [get]
@@ -178,7 +178,7 @@ func (ctrl *AnswerController) GetMarkedQuestions(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  response.Response{data=dto.ExamGuideInfo}  "成功"
+// @Success      200  {object}  response.Response{data=dto.ExamGuideResponse}  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /exam/{id}/guide [get]

@@ -33,6 +33,9 @@ func SetupCommentRoutes(r *gin.RouterGroup, ctrl *comment.CommentController) {
 func SetupAdminCommentRoutes(r *gin.RouterGroup, ctrl *comment.CommentAdminController) {
 	c := r.Group("/comments")
 	{
+		// 评论列表
+		c.GET("", ctrl.ListComments)
+
 		// 评论管理
 		c.POST("/:id/pin", ctrl.PinComment)
 		c.DELETE("/:id/pin", ctrl.UnpinComment)

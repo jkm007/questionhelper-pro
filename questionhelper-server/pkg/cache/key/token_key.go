@@ -72,3 +72,42 @@ const CodeExpire = 300
 
 // CodeLimitExpire 发送限制时间（1分钟）
 const CodeLimitExpire = 60
+
+// ---- 每日发送限制 ----
+
+// EmailDailyKey 邮箱每日发送次数 Key
+func EmailDailyKey(email string) string {
+	return fmt.Sprintf("qh:email:daily:%s", email)
+}
+
+// EmailIPKey 邮箱验证码 IP 限制 Key
+func EmailIPKey(ip string) string {
+	return fmt.Sprintf("qh:email:ip:%s", ip)
+}
+
+// EmailAttemptsKey 邮箱验证码验证尝试次数 Key
+func EmailAttemptsKey(email, code string) string {
+	return fmt.Sprintf("qh:email:attempts:%s:%s", email, code)
+}
+
+// DailyLimitExpire 每日限制过期时间（计算到当天结束的秒数）
+func DailyLimitExpire() time.Duration {
+	now := time.Now()
+	endOfDay := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	return time.Until(endOfDay)
+}
+
+// EmailIPLimitExpire 邮箱 IP 限制过期时间（1小时）
+const EmailIPLimitExpire = 1 * time.Hour
+
+// MaxEmailDaily 每日邮箱发送上限
+const MaxEmailDaily = 10
+
+// MaxSmsDaily 每日短信发送上限
+const MaxSmsDaily = 10
+
+// MaxEmailIPHourly 每小时邮箱 IP 发送上限
+const MaxEmailIPHourly = 50
+
+// MaxEmailCodeAttempts 邮箱验证码验证尝试上限
+const MaxEmailCodeAttempts = 5

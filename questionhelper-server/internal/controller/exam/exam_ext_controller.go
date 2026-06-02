@@ -228,7 +228,7 @@ func (ctrl *ExamExtController) ResumeExam(c *gin.Context) {
 // @Param        id         path      uint  true   "考试ID"
 // @Param        page       query     int   false  "页码"
 // @Param        page_size  query     int   false  "每页数量"
-// @Success      200  {object}  response.PageResponse{data=[]dto.ExamScoreInfo}  "成功"
+// @Success      200  {object}  response.PageResponse  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/exams/{id}/scores [get]
@@ -258,7 +258,7 @@ func (ctrl *ExamExtController) GetExamScores(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  dto.ExportScoresResponse  "成功"
+// @Success      200  {array}  dto.ExamRecordInfo  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/exams/{id}/scores/export [get]
@@ -288,7 +288,7 @@ func (ctrl *ExamExtController) ExportExamScores(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  response.Response{data=dto.ExamStatisticsInfo}  "成功"
+// @Success      200  {object}  response.Response{data=dto.ExamStatisticsResponse}  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/exams/{id}/statistics [get]

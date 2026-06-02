@@ -88,7 +88,12 @@ func (ctrl *ClassController) RejectCreatorApplication(c *gin.Context) {
 		return
 	}
 
-	if err := class.RejectCreatorApplication(uint(classID), uint(appID), userID); err != nil {
+	var req struct {
+		Remark string `json:"remark"`
+	}
+	c.ShouldBindJSON(&req)
+
+	if err := class.RejectCreatorApplication(uint(classID), uint(appID), userID, req.Remark); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}

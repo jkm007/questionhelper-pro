@@ -138,7 +138,7 @@ func (ctrl *ExamController) SubmitExam(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "考试ID"
-// @Success      200  {object}  response.Response{data=dto.ExamResultInfo}  "成功"
+// @Success      200  {object}  response.Response  "成功"
 // @Failure      400  {object}  response.Response  "无效的考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /exam/{id}/result [get]

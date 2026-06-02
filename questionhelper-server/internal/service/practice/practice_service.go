@@ -3,12 +3,15 @@ package practice
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	questionRepo "questionhelper-server/internal/repository/question"
 	practiceRepo "questionhelper-server/internal/repository/practice"
 	wrongRepo "questionhelper-server/internal/repository/wrong"
+	"questionhelper-server/pkg/consts"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -82,7 +85,7 @@ func SubmitPractice(sessionID, userID uint, req *dto.SubmitPracticeAnswerRequest
 		return errors.New("题目不存在")
 	}
 
-	isCorrect := question.Answer == req.Answer
+	isCorrect := checkAnswer(question, req.Answer)
 
 	// 保存答题记录
 	record := &model.PracticeRecord{
@@ -106,10 +109,14 @@ func SubmitPractice(sessionID, userID uint, req *dto.SubmitPracticeAnswerRequest
 }
 
 // FinishPractice 完成练习
-func FinishPractice(sessionID uint) error {
+func FinishPractice(sessionID, userID uint) error {
 	session, err := practiceRepo.FindSessionByID(sessionID)
 	if err != nil {
 		return errors.New("练习会话不存在")
+	}
+
+	if session.UserID != userID {
+		return errors.New("无权操作此练习")
 	}
 
 	if session.Status != 0 {
@@ -245,4 +252,43 @@ func updateWrongQuestion(userID, questionID, source, sourceID uint, answer strin
 		Mastered:   false,
 	}
 	wrongRepo.Create(wrong)
+}
+
+// checkAnswer 验证用户答案是否正确
+func checkAnswer(question *model.Question, userAnswer string) bool {
+	correctAnswer := strings.TrimSpace(question.Answer)
+	userAnswer = strings.TrimSpace(userAnswer)
+
+	switch question.Type {
+	case consts.QuestionTypeMultiple:
+		// 多选题：按逗号分割、排序后比较
+		correctParts := strings.Split(correctAnswer, ",")
+		userParts := strings.Split(userAnswer, ",")
+		for i := range correctParts {
+			correctParts[i] = strings.TrimSpace(correctParts[i])
+		}
+		for i := range userParts {
+			userParts[i] = strings.TrimSpace(userParts[i])
+		}
+		sort.Strings(correctParts)
+		sort.Strings(userParts)
+		return strings.Join(correctParts, ",") == strings.Join(userParts, ",")
+
+	case consts.QuestionTypeFill:
+		// 填空题：答案包含 | 分隔符表示多种可接受答案
+		if strings.Contains(correctAnswer, "|") {
+			alternatives := strings.Split(correctAnswer, "|")
+			for _, alt := range alternatives {
+				if strings.TrimSpace(alt) == userAnswer {
+					return true
+				}
+			}
+			return false
+		}
+		return correctAnswer == userAnswer
+
+	default:
+		// 单选题、判断题、简答题等
+		return correctAnswer == userAnswer
+	}
 }

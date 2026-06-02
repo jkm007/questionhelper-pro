@@ -368,7 +368,10 @@ func (ctrl *PracticeController) Checkin(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	var req dto.CheckinRequest
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
 
 	info, err := practice.Checkin(userID, &req)
 	if err != nil {

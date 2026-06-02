@@ -658,6 +658,10 @@ func ListStorageConfigs() ([]model.StorageConfig, error) {
 	if err := database.DB.Order("is_default DESC, id ASC").Find(&configs).Error; err != nil {
 		return nil, fmt.Errorf("获取存储配置失败: %w", err)
 	}
+	// 脱敏处理
+	for i := range configs {
+		configs[i].SecretKey = maskSensitiveValue(configs[i].SecretKey)
+	}
 	return configs, nil
 }
 
@@ -736,6 +740,8 @@ func GetEmailConfig() (*model.EmailConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("获取邮件配置失败: %w", err)
 	}
+	// 脱敏处理
+	config.Password = maskSensitiveValue(config.Password)
 	return &config, nil
 }
 
@@ -822,6 +828,8 @@ func GetSMSConfig() (*model.SMSConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("获取短信配置失败: %w", err)
 	}
+	// 脱敏处理
+	config.AccessKeySecret = maskSensitiveValue(config.AccessKeySecret)
 	return &config, nil
 }
 
@@ -1211,4 +1219,13 @@ func splitByColon(s string) []string {
 		}
 	}
 	return []string{s}
+}
+
+// maskSensitiveValue 脱敏处理敏感配置值
+// 非空值替换为 "****"，空值保持不变
+func maskSensitiveValue(value string) string {
+	if value == "" {
+		return ""
+	}
+	return "****"
 }

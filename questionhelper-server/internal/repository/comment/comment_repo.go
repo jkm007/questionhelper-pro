@@ -37,7 +37,13 @@ func List(req *dto.CommentListRequest) ([]model.Comment, int64, error) {
 	var total int64
 
 	db := database.DB.Model(&model.Comment{}).
-		Where("target_type = ? AND target_id = ? AND status = 1", req.TargetType, req.TargetID)
+		Where("target_type = ? AND target_id = ?", req.TargetType, req.TargetID)
+
+	if req.Status != nil {
+		db = db.Where("status = ?", *req.Status)
+	} else {
+		db = db.Where("status = 1")
+	}
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err

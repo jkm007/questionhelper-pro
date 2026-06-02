@@ -24,7 +24,7 @@ func NewPaperController() *PaperController {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "试卷ID"
-// @Success      200  {object}  response.Response{data=dto.PaperPreviewInfo}  "成功"
+// @Success      200  {object}  response.Response{data=dto.PaperPreviewResponse}  "成功"
 // @Failure      400  {object}  response.Response  "无效的试卷ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/papers/{id}/preview [get]
@@ -234,7 +234,7 @@ func (ctrl *PaperController) ExportPaper(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "试卷ID"
-// @Success      200  {object}  response.Response{data=dto.PaperStatsInfo}  "成功"
+// @Success      200  {object}  response.Response{data=dto.PaperStatsResponse}  "成功"
 // @Failure      400  {object}  response.Response  "无效的试卷ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/papers/{id}/stats [get]

@@ -4,6 +4,8 @@ import (
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	"questionhelper-server/pkg/database"
+
+	"gorm.io/gorm/clause"
 )
 
 // ==================== PracticeSession ====================
@@ -44,7 +46,10 @@ func CreateRecords(records []model.PracticeRecord) error {
 	if len(records) == 0 {
 		return nil
 	}
-	return database.DB.Create(&records).Error
+	return database.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "session_id"}, {Name: "question_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"answer", "is_correct", "duration"}),
+	}).Create(&records).Error
 }
 
 func GetRecords(sessionID uint) ([]model.PracticeRecord, error) {

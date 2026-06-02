@@ -738,13 +738,15 @@ func (ctrl *ContentController) GetContentPreview(c *gin.Context) {
 // @Router       /search [get]
 // @Security     BearerAuth
 func (ctrl *ContentController) Search(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
 	var req dto.SearchRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
 		return
 	}
 
-	list, total, err := content.Search(&req)
+	list, total, err := content.Search(userID, &req)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

@@ -12,6 +12,21 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
+// PageResponse 分页响应结构（仅用于 Swagger 文档生成）
+type PageResponse struct {
+	Code    string        `json:"code"`
+	Message string        `json:"msg"`
+	Data    PageData      `json:"data"`
+}
+
+// PageData 分页数据
+type PageData struct {
+	List     interface{} `json:"list"`
+	Total    int64       `json:"total"`
+	Page     int         `json:"page"`
+	PageSize int         `json:"page_size"`
+}
+
 func Success(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
 		Code:    "00000",

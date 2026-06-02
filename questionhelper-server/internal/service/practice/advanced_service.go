@@ -27,12 +27,15 @@ func StartMockExam(userID uint, req *dto.StartMockExamRequest) (*dto.MockExamSes
 
 	// 检查最大尝试次数
 	if config.MaxAttempts > 0 {
-		var count int64
-		practiceRepo.ListMockExamHistory(userID, &dto.MockExamHistoryRequest{
+		_, count, err := practiceRepo.ListMockExamHistory(userID, &dto.MockExamHistoryRequest{
 			ConfigID: &req.ConfigID,
 		})
-		// 简化处理：直接查询数量
-		_ = count
+		if err != nil {
+			return nil, fmt.Errorf("查询考试历史失败: %w", err)
+		}
+		if count >= int64(config.MaxAttempts) {
+			return nil, fmt.Errorf("已达到最大尝试次数 %d", config.MaxAttempts)
+		}
 	}
 
 	// 获取题目数量
@@ -94,7 +97,7 @@ func SubmitMockExam(sessionID, userID uint, req *dto.SubmitMockExamRequest) (*dt
 		if err != nil {
 			continue
 		}
-		isCorrect := question.Answer == ans.Answer
+		isCorrect := checkAnswer(question, ans.Answer)
 		if isCorrect {
 			correctCount++
 		}
@@ -896,7 +899,7 @@ func SubmitChallenge(sessionID, userID uint, req *dto.SubmitChallengeRequest) (*
 		if err != nil {
 			continue
 		}
-		isCorrect := question.Answer == ans.Answer
+		isCorrect := checkAnswer(question, ans.Answer)
 		if isCorrect {
 			correctCount++
 		}

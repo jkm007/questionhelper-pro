@@ -1,7 +1,6 @@
 package file
 
 import (
-	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
@@ -26,11 +25,16 @@ import (
 )
 
 const (
-	uploadDir   = "./uploads"
-	maxFileSize = 10 << 20 // 10MB
+	uploadDir      = "./uploads"
+	maxFilenameLen = 255
+	maxBatchCount  = 20 // max files per batch
 
-	imageMaxSize    = 5 << 20 // 5MB for images
-	batchMaxCount   = 10      // max files per batch
+	// Per-type size limits
+	imageMaxSize    = 5 << 20   // 5MB for images
+	documentMaxSize = 20 << 20  // 20MB for documents
+	audioMaxSize    = 50 << 20  // 50MB for audio
+	videoMaxSize    = 200 << 20 // 200MB for videos
+
 	thumbnailDir    = "./uploads/thumbnails"
 	thumbnailWidth  = 200
 	thumbnailHeight = 200
@@ -40,7 +44,7 @@ var allowedExtensions = map[string]bool{
 	".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true,
 	".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
 	".ppt": true, ".pptx": true, ".txt": true, ".csv": true,
-	".mp3": true, ".mp4": true,
+	".mp3": true, ".wav": true, ".m4a": true, ".mp4": true, ".webm": true,
 }
 
 var imageExtensions = map[string]bool{
@@ -53,11 +57,34 @@ var documentExtensions = map[string]bool{
 }
 
 var videoExtensions = map[string]bool{
-	".mp4": true,
+	".mp4": true, ".webm": true,
 }
 
 var audioExtensions = map[string]bool{
-	".mp3": true,
+	".mp3": true, ".wav": true, ".m4a": true,
+}
+
+// mimeExtMapping maps extensions to their allowed Content-Type values.
+var mimeExtMapping = map[string][]string{
+	".jpg":  {"image/jpeg"},
+	".jpeg": {"image/jpeg"},
+	".png":  {"image/png"},
+	".gif":  {"image/gif"},
+	".webp": {"image/webp"},
+	".pdf":  {"application/pdf"},
+	".doc":  {"application/msword", "application/vnd.ms-word"},
+	".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+	".xls":  {"application/vnd.ms-excel"},
+	".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+	".ppt":  {"application/vnd.ms-powerpoint"},
+	".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+	".txt":  {"text/plain"},
+	".csv":  {"text/csv", "application/csv", "text/plain"},
+	".mp3":  {"audio/mpeg", "audio/mp3"},
+	".wav":  {"audio/wav", "audio/x-wav"},
+	".m4a":  {"audio/mp4", "audio/x-m4a"},
+	".mp4":  {"video/mp4"},
+	".webm": {"video/webm"},
 }
 
 // storage 全局存储实例，通过 Init 初始化
@@ -73,60 +100,203 @@ func Init(cfg config.OSSConfig) error {
 	return nil
 }
 
+// ==================== Validation Helpers ====================
+
+// getFileMaxSize returns the max allowed size in bytes based on file extension.
+func getFileMaxSize(filename string) int64 {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch {
+	case imageExtensions[ext]:
+		return imageMaxSize
+	case documentExtensions[ext]:
+		return documentMaxSize
+	case audioExtensions[ext]:
+		return audioMaxSize
+	case videoExtensions[ext]:
+		return videoMaxSize
+	default:
+		return documentMaxSize // conservative default
+	}
+}
+
+// validateFilename checks filename length, path traversal patterns, and double extensions.
+func validateFilename(filename string) error {
+	if filename == "" {
+		return fmt.Errorf("文件名不能为空")
+	}
+
+	// Length check
+	if len(filename) > maxFilenameLen {
+		return fmt.Errorf("文件名过长: %d 字符 (最大 %d)", len(filename), maxFilenameLen)
+	}
+
+	// Path traversal checks
+	lower := strings.ToLower(filename)
+	if strings.Contains(lower, "../") || strings.Contains(lower, "..\\") {
+		return fmt.Errorf("文件名包含非法路径遍历字符")
+	}
+
+	// Check for null bytes
+	if strings.ContainsRune(filename, 0) {
+		return fmt.Errorf("文件名包含非法字符")
+	}
+
+	// Double extension detection (e.g., .jpg.exe, .png.scr)
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext == "" {
+		return fmt.Errorf("文件必须包含扩展名")
+	}
+
+	// Strip the primary extension and check if there is another one
+	stem := strings.TrimSuffix(filename, filepath.Ext(filename))
+	secondExt := strings.ToLower(filepath.Ext(stem))
+	if secondExt != "" {
+		// If the inner extension is also a known type, flag as suspicious
+		if allowedExtensions[secondExt] {
+			return fmt.Errorf("检测到双扩展名，可能存在安全风险: %s", filename)
+		}
+	}
+
+	return nil
+}
+
+// validateMIMEType checks that the declared Content-Type is consistent with the file extension.
+func validateMIMEType(filename, contentType string) error {
+	ext := strings.ToLower(filepath.Ext(filename))
+
+	allowedTypes, ok := mimeExtMapping[ext]
+	if !ok {
+		return nil // unknown extension; skip MIME check
+	}
+
+	// Extract the MIME type portion (before any semicolon/params)
+	ct := strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
+	ct = strings.ToLower(ct)
+
+	for _, allowed := range allowedTypes {
+		if ct == allowed {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Content-Type %q 与文件扩展名 %s 不匹配，期望: %s", contentType, ext, strings.Join(allowedTypes, ", "))
+}
+
+// getBusinessDir returns the subdirectory for a given file based on its extension.
+// This organises uploads into logical directories.
+func getBusinessDir(ext string) string {
+	ext = strings.ToLower(ext)
+	switch {
+	case imageExtensions[ext]:
+		return "avatar"
+	case documentExtensions[ext]:
+		return "document"
+	case audioExtensions[ext], videoExtensions[ext]:
+		return "media"
+	default:
+		return "temp"
+	}
+}
+
+// getBusinessDirByType returns the subdirectory based on a business type hint.
+func getBusinessDirByType(businessType, ext string) string {
+	switch businessType {
+	case "avatar":
+		return "avatar"
+	case "question":
+		return "question"
+	case "exam":
+		return "exam"
+	case "class":
+		return "class"
+	default:
+		return getBusinessDir(ext)
+	}
+}
+
 // ==================== Basic Upload ====================
 
 // UploadFile 上传文件
 func UploadFile(uploaderID uint, fileName string, fileSize int64, fileType string, reader io.Reader) (*model.File, error) {
-	// 检查文件大小限制
-	if fileSize > maxFileSize {
-		return nil, fmt.Errorf("文件大小超过限制: %d bytes (最大 %d bytes)", fileSize, maxFileSize)
+	// 1. 文件名校验
+	if err := validateFilename(fileName); err != nil {
+		return nil, err
 	}
 
-	// 确保上传目录存在
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return nil, fmt.Errorf("创建上传目录失败: %w", err)
-	}
-
-	// 检查文件扩展名白名单
 	ext := strings.ToLower(filepath.Ext(fileName))
+
+	// 2. 扩展名白名单
 	if !allowedExtensions[ext] {
 		return nil, fmt.Errorf("不支持的文件类型: %s", ext)
 	}
 
-	// 使用UUID生成安全的文件名，避免路径遍历
-	newFileName := uuid.New().String() + ext
+	// 3. 按类型检查文件大小限制
+	maxSize := getFileMaxSize(fileName)
+	if fileSize > maxSize {
+		return nil, fmt.Errorf("文件大小超过限制: %d bytes (最大 %d bytes)", fileSize, maxSize)
+	}
 
-	// 读取文件内容用于 MD5 计算和存储
-	buf, err := io.ReadAll(reader)
+	// 4. MIME 类型校验
+	if err := validateMIMEType(fileName, fileType); err != nil {
+		return nil, err
+	}
+
+	// 5. 使用UUID生成安全文件名，按业务类型分目录存储
+	newFileName := uuid.New().String() + ext
+	businessDir := getBusinessDirByType("default", ext)
+	objectName := businessDir + "/" + newFileName
+
+	// 6. 流式写入临时文件 + MD5 计算（避免 io.ReadAll OOM）
+	tmpFile, err := os.CreateTemp("", "upload-*")
+	if err != nil {
+		return nil, fmt.Errorf("创建临时文件失败: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath) // 清理临时文件
+
+	hash := md5.New()
+	writer := io.MultiWriter(tmpFile, hash)
+
+	// 用 LimitReader 防止实际读取超过限制的字节数
+	limitedReader := io.LimitReader(reader, maxSize+1)
+	written, err := io.Copy(writer, limitedReader)
+	tmpFile.Close()
 	if err != nil {
 		return nil, fmt.Errorf("读取文件失败: %w", err)
 	}
+	if written > maxSize {
+		return nil, fmt.Errorf("文件大小超过限制: %d bytes (最大 %d bytes)", written, maxSize)
+	}
 
-	// 计算 MD5
-	hash := md5.Sum(buf)
-	md5Hash := hex.EncodeToString(hash[:])
+	md5Hash := hex.EncodeToString(hash.Sum(nil))
 
-	// 检查MD5去重
+	// 7. 检查MD5去重
 	existing, err := fileRepo.FindFileByMD5(md5Hash)
 	if err == nil && existing != nil {
 		logger.Infof("文件已存在(MD5去重): %s -> %s", fileName, existing.Name)
 		return existing, nil
 	}
 
-	// 通过 Storage 保存文件
+	// 8. 通过 Storage 保存文件（流式读取临时文件）
+	tmpReader, err := os.Open(tmpPath)
+	if err != nil {
+		return nil, fmt.Errorf("打开临时文件失败: %w", err)
+	}
+	defer tmpReader.Close()
+
 	ctx := context.Background()
-	fileURL, err := storage.Save(ctx, newFileName, bytes.NewReader(buf), fileSize, fileType)
+	fileURL, err := storage.Save(ctx, objectName, tmpReader, written, fileType)
 	if err != nil {
 		return nil, fmt.Errorf("保存文件失败: %w", err)
 	}
 
-	// 保存文件信息到数据库
+	// 9. 保存文件信息到数据库
 	file := &model.File{
 		Name:       newFileName,
 		Original:   fileName,
 		Path:       fileURL,
 		URL:        fileURL,
-		Size:       fileSize,
+		Size:       written,
 		Type:       fileType,
 		Extension:  ext,
 		MD5:        md5Hash,
@@ -138,7 +308,7 @@ func UploadFile(uploaderID uint, fileName string, fileSize int64, fileType strin
 		return nil, fmt.Errorf("保存文件信息失败: %w", err)
 	}
 
-	logger.Infof("文件上传成功: %s (MD5: %s)", fileName, md5Hash)
+	logger.Infof("文件上传成功: %s (MD5: %s, 目录: %s)", fileName, md5Hash, businessDir)
 	return file, nil
 }
 
@@ -146,19 +316,32 @@ func UploadFile(uploaderID uint, fileName string, fileSize int64, fileType strin
 
 // UploadImage 上传图片（带压缩和缩略图生成）
 func UploadImage(uploaderID uint, fileName string, fileSize int64, fileType string, reader io.Reader) (*dto.ImageUploadResponse, error) {
-	// 检查文件大小限制
-	if fileSize > imageMaxSize {
-		return nil, fmt.Errorf("图片大小超过限制: %d bytes (最大 %d bytes)", fileSize, imageMaxSize)
+	// 1. 文件名校验
+	if err := validateFilename(fileName); err != nil {
+		return nil, err
 	}
 
-	// 检查是否为图片类型
 	ext := strings.ToLower(filepath.Ext(fileName))
+
+	// 2. 检查是否为图片类型
 	if !imageExtensions[ext] {
 		return nil, fmt.Errorf("不支持的图片类型: %s，仅支持 jpg/jpeg/png/gif/webp", ext)
 	}
 
-	// 确保上传目录存在
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+	// 3. 检查文件大小限制
+	if fileSize > imageMaxSize {
+		return nil, fmt.Errorf("图片大小超过限制: %d bytes (最大 %d bytes)", fileSize, imageMaxSize)
+	}
+
+	// 4. MIME 类型校验
+	if err := validateMIMEType(fileName, fileType); err != nil {
+		return nil, err
+	}
+
+	// 5. 确保上传目录存在（按业务分目录）
+	businessDir := getBusinessDirByType("avatar", ext)
+	imgDir := filepath.Join(uploadDir, businessDir)
+	if err := os.MkdirAll(imgDir, 0755); err != nil {
 		return nil, fmt.Errorf("创建上传目录失败: %w", err)
 	}
 	if err := os.MkdirAll(thumbnailDir, 0755); err != nil {
@@ -167,7 +350,7 @@ func UploadImage(uploaderID uint, fileName string, fileSize int64, fileType stri
 
 	// 使用UUID生成安全的文件名
 	newFileName := uuid.New().String() + ext
-	filePath := filepath.Clean(filepath.Join(uploadDir, newFileName))
+	filePath := filepath.Clean(filepath.Join(imgDir, newFileName))
 	thumbnailName := uuid.New().String() + "_thumb" + ext
 	thumbnailPath := filepath.Clean(filepath.Join(thumbnailDir, thumbnailName))
 
@@ -217,7 +400,7 @@ func UploadImage(uploaderID uint, fileName string, fileSize int64, fileType stri
 		Name:         newFileName,
 		Original:     fileName,
 		Path:         filePath,
-		URL:          "/uploads/" + newFileName,
+		URL:          "/uploads/" + businessDir + "/" + newFileName,
 		Size:         fileSize,
 		Type:         fileType,
 		Extension:    ext,
@@ -254,12 +437,12 @@ func BatchUpload(uploaderID uint, files []*multipart.FileHeader) *dto.BatchUploa
 		Total: len(files),
 	}
 
-	if len(files) > batchMaxCount {
+	if len(files) > maxBatchCount {
 		result.Failed = make([]dto.FileUploadError, len(files))
 		for i, f := range files {
 			result.Failed[i] = dto.FileUploadError{
 				Filename: f.Filename,
-				Error:    fmt.Sprintf("批量上传最多支持 %d 个文件", batchMaxCount),
+				Error:    fmt.Sprintf("批量上传最多支持 %d 个文件", maxBatchCount),
 			}
 		}
 		return result

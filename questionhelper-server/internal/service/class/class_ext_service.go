@@ -11,6 +11,7 @@ import (
 	"questionhelper-server/internal/model"
 	classRepo "questionhelper-server/internal/repository/class"
 	userRepo "questionhelper-server/internal/repository/user"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -2325,8 +2326,12 @@ func PinClass(classID, userID uint) error {
 		return errors.New("不是班级成员")
 	}
 
-	// 置顶功能通过 ClassMember 的扩展字段实现
-	// 这里简化处理，实际可以添加 pinned_at 字段
+	if err := database.DB.Model(&model.ClassMember{}).
+		Where("class_id = ? AND user_id = ?", classID, userID).
+		Update("is_pinned", true).Error; err != nil {
+		return fmt.Errorf("置顶班级失败: %w", err)
+	}
+
 	logger.Infof("用户 %d 置顶班级 %d", userID, classID)
 	return nil
 }
@@ -2336,6 +2341,12 @@ func UnpinClass(classID, userID uint) error {
 	// 检查是否是班级成员
 	if _, err := classRepo.FindMember(classID, userID); err != nil {
 		return errors.New("不是班级成员")
+	}
+
+	if err := database.DB.Model(&model.ClassMember{}).
+		Where("class_id = ? AND user_id = ?", classID, userID).
+		Update("is_pinned", false).Error; err != nil {
+		return fmt.Errorf("取消置顶失败: %w", err)
 	}
 
 	logger.Infof("用户 %d 取消置顶班级 %d", userID, classID)
@@ -2384,8 +2395,12 @@ func SetClassExpire(classID, operatorID uint, req *dto.SetExpireRequest) error {
 		}
 	}
 
-	// 有效期可以通过 Class 的扩展字段实现
-	// 这里简化处理
+	if err := database.DB.Model(&model.Class{}).
+		Where("id = ?", classID).
+		Update("expires_at", req.ExpireAt).Error; err != nil {
+		return fmt.Errorf("设置有效期失败: %w", err)
+	}
+
 	logger.Infof("设置班级 %d 有效期: %v", classID, req.ExpireAt)
 	return nil
 }

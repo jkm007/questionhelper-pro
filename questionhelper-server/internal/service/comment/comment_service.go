@@ -53,6 +53,14 @@ func ListCommentsAdmin(req *dto.CommentAdminListRequest) ([]dto.CommentInfo, int
 
 // CreateComment 创建评论
 func CreateComment(userID uint, req *dto.CreateCommentRequest) error {
+	// 检查回复层级限制
+	if req.ParentID != nil && *req.ParentID > 0 {
+		depth := getCommentDepth(*req.ParentID)
+		if depth >= 2 {
+			return errors.New("评论回复最多支持2层嵌套")
+		}
+	}
+
 	// 检查黑名单
 	if err := checkBlacklist(userID, req.TargetType, req.TargetID); err != nil {
 		return err
@@ -635,6 +643,22 @@ func ExportComments(req *dto.CommentExportRequest) ([]dto.CommentInfo, error) {
 }
 
 // ==================== Helper Functions ====================
+
+// getCommentDepth 获取评论的嵌套深度
+// depth 0 = 顶级评论, 1 = 一级回复, 2 = 二级回复
+func getCommentDepth(commentID uint) int {
+	depth := 0
+	currentID := commentID
+	for depth < 3 { // 安全上限，防止无限循环
+		comment, err := commentRepo.FindByID(currentID)
+		if err != nil || comment.ParentID == nil {
+			break
+		}
+		depth++
+		currentID = *comment.ParentID
+	}
+	return depth
+}
 
 // checkBlacklist 检查用户是否在黑名单中
 func checkBlacklist(userID uint, targetType int8, targetID uint) error {

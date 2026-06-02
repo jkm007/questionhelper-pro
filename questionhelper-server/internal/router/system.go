@@ -36,13 +36,6 @@ func SetupAdminSystemRoutes(r *gin.RouterGroup, ctrl *system.SystemController) {
 		adminLogs.GET("/stats", ctrl.GetLogStats)
 	}
 
-	// 通知渠道管理
-	channels := r.Group("/notifications/channels")
-	{
-		channels.GET("", ctrl.ListNotificationChannels)
-		channels.PUT("/:id", ctrl.UpdateNotificationChannel)
-	}
-
 	// 数据备份
 	backup := r.Group("/backup")
 	{

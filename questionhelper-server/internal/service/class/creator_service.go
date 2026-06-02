@@ -3,10 +3,12 @@ package class
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
 	classRepo "questionhelper-server/internal/repository/class"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -73,19 +75,60 @@ func ApproveCreatorApplication(classID, appID, operatorID uint) error {
 		return err
 	}
 
-	// 这里简化处理：直接通过 ID 查找
-	// 实际应该有单独的申请表
-	logger.Infof("审批通过创作者申请 %d", appID)
+	// 查询申请记录（ClassCreatorPermission 中 can_create=false 的视为待审批）
+	var perm model.ClassCreatorPermission
+	if err := database.DB.First(&perm, appID).Error; err != nil {
+		return errors.New("申请记录不存在")
+	}
+
+	if perm.CanCreate {
+		return errors.New("该申请已审批通过")
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"can_create": true,
+		"granted_by": operatorID,
+		"updated_at": now,
+	}
+
+	if err := database.DB.Model(&perm).Updates(updates).Error; err != nil {
+		return fmt.Errorf("审批通过失败: %w", err)
+	}
+
+	logger.Infof("审批通过创作者申请 %d，操作人 %d", appID, operatorID)
 	return nil
 }
 
 // RejectCreatorApplication 审批驳回
-func RejectCreatorApplication(classID, appID, operatorID uint) error {
+func RejectCreatorApplication(classID, appID, operatorID uint, remark string) error {
 	if err := checkClassPermission(classID, operatorID, 3); err != nil {
 		return err
 	}
 
-	logger.Infof("审批驳回创作者申请 %d", appID)
+	// 查询申请记录
+	var perm model.ClassCreatorPermission
+	if err := database.DB.First(&perm, appID).Error; err != nil {
+		return errors.New("申请记录不存在")
+	}
+
+	if perm.CanCreate {
+		return errors.New("该申请已审批通过，无法驳回")
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"can_create": false,
+		"granted_by": operatorID,
+		"reason":     remark,
+		"updated_at": now,
+	}
+
+	if err := database.DB.Model(&perm).Updates(updates).Error; err != nil {
+		return fmt.Errorf("审批驳回失败: %w", err)
+	}
+
+	logger.Infof("审批驳回创作者申请 %d，操作人 %d", appID, operatorID)
 	return nil
 }
 

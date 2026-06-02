@@ -36,6 +36,9 @@ type RegisterRequest struct {
 	CaptchaCode     string `json:"captchaCode" binding:"required"` // T19: 必填
 	Agreement       bool   `json:"agreement" binding:"required"`
 	Source          string `json:"source"` // 注册来源:h5/miniapp/app/web
+	DeviceID        string `json:"-"`      // 设备标识（由控制器自动填充）
+	DeviceInfo      string `json:"-"`      // 设备IP（由控制器自动填充）
+	UserAgent       string `json:"-"`      // User-Agent（由控制器自动填充）
 }
 
 // RegisterResponse 注册响应

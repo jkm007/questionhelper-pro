@@ -14,11 +14,11 @@ type LogCleanupTask struct{}
 func (t *LogCleanupTask) Run() {
 	logger.Info("执行日志清理任务")
 
-	// 清理30天前的操作日志
+	// 清理180天前的操作日志
 	result := database.DB.Exec(`
 		DELETE FROM operation_logs
 		WHERE created_at < ?
-	`, time.Now().AddDate(0, 0, -30))
+	`, time.Now().AddDate(0, 0, -180))
 
 	if result.Error != nil {
 		logger.Errorf("清理操作日志失败: %v", result.Error)

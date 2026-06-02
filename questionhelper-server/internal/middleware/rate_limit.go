@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"questionhelper-server/pkg/response"
 )
 
 type RateLimiter struct {
@@ -74,10 +76,7 @@ func RateLimitMiddleware() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		if !limiter.Allow(c.ClientIP()) {
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"code":    -1,
-				"message": "请求过于频繁，请稍后再试",
-			})
+			response.Error(c, http.StatusTooManyRequests, "请求过于频繁，请稍后再试")
 			c.Abort()
 			return
 		}

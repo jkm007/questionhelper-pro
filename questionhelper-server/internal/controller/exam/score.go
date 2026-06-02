@@ -19,7 +19,7 @@ import (
 // @Param        page       query     int  false  "页码"
 // @Param        page_size  query     int  false  "每页数量"
 // @Param        exam_id    query     uint false  "考试ID"
-// @Success      200  {object}  response.PageResponse{data=[]dto.ScoreInfo}  "成功"
+// @Success      200  {object}  response.PageResponse{data=[]dto.ExamRecordInfo}  "成功"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/scores [get]
 // @Security     BearerAuth
@@ -51,7 +51,7 @@ func (ctrl *ExamController) ListScores(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      uint  true  "成绩记录ID"
-// @Success      200  {object}  response.Response{data=dto.ScoreInfo}  "成功"
+// @Success      200  {object}  response.Response{data=dto.ExamRecordInfo}  "成功"
 // @Failure      400  {object}  response.Response  "无效的记录ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/scores/{id} [get]
@@ -78,7 +78,7 @@ func (ctrl *ExamController) GetScore(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        exam_id  query     uint  true  "考试ID"
-// @Success      200  {object}  response.Response{data=dto.ScoreAnalysisInfo}  "成功"
+// @Success      200  {object}  response.Response  "成功"
 // @Failure      400  {object}  response.Response  "请输入考试ID"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/scores/analysis [get]

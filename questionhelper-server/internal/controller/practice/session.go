@@ -122,13 +122,14 @@ func (ctrl *PracticeController) GetPracticeResult(c *gin.Context) {
 // @Router       /practice/{id}/finish [post]
 // @Security     BearerAuth
 func (ctrl *PracticeController) FinishPractice(c *gin.Context) {
+	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的练习ID")
 		return
 	}
 
-	if err := practice.FinishPractice(uint(id)); err != nil {
+	if err := practice.FinishPractice(uint(id), userID); err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
