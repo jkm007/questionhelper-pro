@@ -55,22 +55,8 @@ func PermissionMiddleware(requiredPermission string) gin.HandlerFunc {
 // AdminOnly 仅管理员可访问
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		roleIDs, exists := c.Get("role_ids")
-		if !exists {
-			response.Error(c, http.StatusForbidden, "无权限访问")
-			c.Abort()
-			return
-		}
-
-		ids, ok := roleIDs.([]uint)
-		if !ok || len(ids) == 0 {
-			response.Error(c, http.StatusForbidden, "无权限访问")
-			c.Abort()
-			return
-		}
-
-		// 通过数据库查询角色编码，而非硬编码 ID（与 data_permission.go 保持一致）
-		if isAdmin(ids) {
+		// 从 JWT 上下文获取角色编码判断（无需查数据库）
+		if isAdmin(c) {
 			c.Next()
 			return
 		}

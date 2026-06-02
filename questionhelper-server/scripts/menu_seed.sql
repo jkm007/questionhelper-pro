@@ -41,7 +41,7 @@ INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, 
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(201, 2, 'UserList',       '/user/list',       'system/user/index',       '', '用户列表',       'User',      0, 2, 'user:list',       1, 1, NOW(), NOW()),
+(201, 2, 'UserList',       '/user/list',       'system/user/index',       '', '用户列表',       'User',      0, 2, 'user:list:view',       1, 1, NOW(), NOW()),
 (202, 2, 'ClassCreator',   '/user/creator',     'system/creator/index',    '', '班级创作者管理', 'Star',      0, 2, 'class:creator:view', 2, 1, NOW(), NOW());
 
 -- =====================================================
@@ -52,29 +52,29 @@ INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, 
 (301, 3, 'QuestionPublic',    '/question/public',    'question/public/index',    '', '公共题目',   'Document',  0, 2, 'question:public:view',   1, 1, NOW(), NOW()),
 (302, 3, 'QuestionPrivate',   '/question/private',   'question/private/index',   '', '私有题目',   'Lock',      0, 2, 'question:private:view',  2, 1, NOW(), NOW()),
 (303, 3, 'QuestionClass',     '/question/class',     'question/class/index',     '', '班级题目',   'School',    0, 2, 'question:class:view',    3, 1, NOW(), NOW()),
-(304, 3, 'QuestionCategory',  '/question/category',  'question/category/index',  '', '题目分类',   'Menu',      0, 2, 'category:view',          4, 1, NOW(), NOW()),
-(305, 3, 'QuestionKnowledge', '/question/knowledge', 'question/knowledge/index', '', '知识点管理', 'Collection',0, 2, 'knowledge:view',         5, 1, NOW(), NOW()),
-(306, 3, 'QuestionImport',    '/question/import',    'question/import/index',    '', '批量导入',   'Upload',    0, 2, 'question:import',        6, 1, NOW(), NOW()),
-(307, 3, 'QuestionExport',    '/question/export',    'question/export/index',    '', '批量导出',   'Download',  0, 2, 'question:export',        7, 1, NOW(), NOW());
+(304, 3, 'QuestionCategory',  '/question/category',  'question/category/index',  '', '题目分类',   'Menu',      0, 2, 'category:list:view',          4, 1, NOW(), NOW()),
+(305, 3, 'QuestionKnowledge', '/question/knowledge', 'question/knowledge/index', '', '知识点管理', 'Collection',0, 2, 'knowledge:list:view',         5, 1, NOW(), NOW()),
+(306, 3, 'QuestionImport',    '/question/import',    'question/import/index',    '', '批量导入',   'Upload',    0, 2, 'question:import:view',        6, 1, NOW(), NOW()),
+(307, 3, 'QuestionExport',    '/question/export',    'question/export/index',    '', '批量导出',   'Download',  0, 2, 'question:export:view',        7, 1, NOW(), NOW());
 
 -- =====================================================
 -- 二级菜单（考试管理）— 需求文档 12.2
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(401, 4, 'ExamPaper',    '/exam/paper',    'exam/paper/index',    '', '试卷列表', 'Document',  0, 2, 'exam:view',      1, 1, NOW(), NOW()),
-(402, 4, 'ExamComposer', '/exam/composer', 'exam/composer/index', '', '组卷管理', 'EditPen',   0, 2, 'composer:view',  2, 1, NOW(), NOW()),
-(403, 4, 'ExamPublish',  '/exam/publish',  'exam/publish/index',  '', '考试发布', 'Promotion', 0, 2, 'exam:publish',   3, 1, NOW(), NOW()),
-(404, 4, 'ExamMonitor',  '/exam/monitor',  'exam/monitor/index',  '', '考试监控', 'Monitor',   0, 2, 'exam:monitor',   4, 1, NOW(), NOW()),
-(405, 4, 'ExamScore',    '/exam/score',    'exam/score/index',    '', '成绩管理', 'Trophy',    0, 2, 'score:view',     5, 1, NOW(), NOW());
+(401, 4, 'ExamPaper',    '/exam/paper',    'exam/paper/index',    '', '试卷列表', 'Document',  0, 2, 'exam:paper:view',      1, 1, NOW(), NOW()),
+(402, 4, 'ExamComposer', '/exam/composer', 'exam/composer/index', '', '组卷管理', 'EditPen',   0, 2, 'exam:composer:view',  2, 1, NOW(), NOW()),
+(403, 4, 'ExamPublish',  '/exam/publish',  'exam/publish/index',  '', '考试发布', 'Promotion', 0, 2, 'exam:publish:view',   3, 1, NOW(), NOW()),
+(404, 4, 'ExamMonitor',  '/exam/monitor',  'exam/monitor/index',  '', '考试监控', 'Monitor',   0, 2, 'exam:monitor:view',   4, 1, NOW(), NOW()),
+(405, 4, 'ExamScore',    '/exam/score',    'exam/score/index',    '', '成绩管理', 'Trophy',    0, 2, 'score:list:view',     5, 1, NOW(), NOW());
 
 -- =====================================================
 -- 二级菜单（班级管理）— 需求文档 12.2
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(501, 5, 'ClassList',      '/class/list',      'class/list/index',      '', '班级列表',       'School',    0, 2, 'class:view',            1, 1, NOW(), NOW()),
-(502, 5, 'ClassDetail',    '/class/detail',    'class/detail/index',    '', '班级详情',       'View',      0, 2, 'class:detail',          2, 1, NOW(), NOW()),
+(501, 5, 'ClassList',      '/class/list',      'class/list/index',      '', '班级列表',       'School',    0, 2, 'class:list:view',            1, 1, NOW(), NOW()),
+(502, 5, 'ClassDetail',    '/class/detail',    'class/detail/index',    '', '班级详情',       'View',      0, 2, 'class:detail:view',          2, 1, NOW(), NOW()),
 (503, 5, 'ClassApproval',  '/class/approval',  'class/approval/index',  '', '班级创作者审批', 'Stamp',     0, 2, 'class:creator:approve', 3, 1, NOW(), NOW()),
 (504, 5, 'ClassResource',  '/class/resource',  'class/resource/index',  '', '班级资源管理',   'Resources', 0, 2, 'class:resource:view',   4, 1, NOW(), NOW());
 
@@ -83,34 +83,34 @@ INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, 
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(601, 6, 'StatisticsOverview', '/statistics/overview', 'statistics/overview/index', '', '数据概览', 'Odometer',    0, 2, 'statistics:overview', 1, 1, NOW(), NOW()),
-(602, 6, 'StatisticsUser',     '/statistics/user',     'statistics/user/index',     '', '用户统计', 'Histogram',   0, 2, 'statistics:user',     2, 1, NOW(), NOW()),
-(603, 6, 'StatisticsAnswer',   '/statistics/answer',   'statistics/answer/index',   '', '答题统计', 'PieChart',    0, 2, 'statistics:answer',   3, 1, NOW(), NOW()),
-(604, 6, 'StatisticsScore',    '/statistics/score',    'statistics/score/index',    '', '成绩分析', 'TrendCharts', 0, 2, 'statistics:score',    4, 1, NOW(), NOW()),
-(605, 6, 'StatisticsSystem',   '/statistics/system',   'statistics/system/index',   '', '系统监控', 'Monitor',     0, 2, 'statistics:system',   5, 1, NOW(), NOW());
+(601, 6, 'StatisticsOverview', '/statistics/overview', 'statistics/overview/index', '', '数据概览', 'Odometer',    0, 2, 'statistics:overview:view', 1, 1, NOW(), NOW()),
+(602, 6, 'StatisticsUser',     '/statistics/user',     'statistics/user/index',     '', '用户统计', 'Histogram',   0, 2, 'statistics:user:view',     2, 1, NOW(), NOW()),
+(603, 6, 'StatisticsAnswer',   '/statistics/answer',   'statistics/answer/index',   '', '答题统计', 'PieChart',    0, 2, 'statistics:answer:view',   3, 1, NOW(), NOW()),
+(604, 6, 'StatisticsScore',    '/statistics/score',    'statistics/score/index',    '', '成绩分析', 'TrendCharts', 0, 2, 'statistics:score:view',    4, 1, NOW(), NOW()),
+(605, 6, 'StatisticsSystem',   '/statistics/system',   'statistics/system/index',   '', '系统监控', 'Monitor',     0, 2, 'statistics:system:view',   5, 1, NOW(), NOW());
 
 -- =====================================================
 -- 二级菜单（系统设置）— 需求文档 12.2
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(701, 7, 'SystemSetting',    '/system/setting',    'setting/basic/index',          '', '基础设置', 'Setting',    0, 2, 'system:settings',    1, 1, NOW(), NOW()),
-(702, 7, 'SystemSecurity',   '/system/security',   'system/security/index',        '', '安全设置', 'Lock',       0, 2, 'system:security',    2, 1, NOW(), NOW()),
-(703, 7, 'SystemRole',       '/system/role',       'system/role/index',            '', '角色管理', 'UserFilled', 0, 2, 'role:view',          3, 1, NOW(), NOW()),
-(704, 7, 'SystemPermission', '/system/permission', 'system/permission/index',      '', '权限管理', 'Key',        0, 2, 'permission:view',    4, 1, NOW(), NOW()),
-(705, 7, 'SystemAudit',      '/system/audit',      'system/audit/index',           '', '操作审计', 'Document',   0, 2, 'system:audit',       5, 1, NOW(), NOW()),
-(706, 7, 'SystemLog',        '/system/log',        'log/system/index',             '', '日志管理', 'Notebook',   0, 2, 'system:logs',        6, 1, NOW(), NOW()),
-(707, 7, 'SystemNotify',     '/system/notify',     'system/notify/index',          '', '通知设置', 'Bell',       0, 2, 'system:notification',7, 1, NOW(), NOW()),
-(708, 7, 'SystemBackup',     '/system/backup',     'backup/list/index',            '', '数据备份', 'Upload',     0, 2, 'system:backup',      8, 1, NOW(), NOW());
+(701, 7, 'SystemSetting',    '/system/setting',    'setting/basic/index',          '', '基础设置', 'Setting',    0, 2, 'system:settings:view',    1, 1, NOW(), NOW()),
+(702, 7, 'SystemSecurity',   '/system/security',   'system/security/index',        '', '安全设置', 'Lock',       0, 2, 'system:security:view',    2, 1, NOW(), NOW()),
+(703, 7, 'SystemRole',       '/system/role',       'system/role/index',            '', '角色管理', 'UserFilled', 0, 2, 'role:list:view',          3, 1, NOW(), NOW()),
+(704, 7, 'SystemPermission', '/system/permission', 'system/permission/index',      '', '权限管理', 'Key',        0, 2, 'permission:list:view',    4, 1, NOW(), NOW()),
+(705, 7, 'SystemAudit',      '/system/audit',      'system/audit/index',           '', '操作审计', 'Document',   0, 2, 'system:audit:view',       5, 1, NOW(), NOW()),
+(706, 7, 'SystemLog',        '/system/log',        'log/system/index',             '', '日志管理', 'Notebook',   0, 2, 'system:logs:view',        6, 1, NOW(), NOW()),
+(707, 7, 'SystemNotify',     '/system/notify',     'system/notify/index',          '', '通知设置', 'Bell',       0, 2, 'system:notification:view',7, 1, NOW(), NOW()),
+(708, 7, 'SystemBackup',     '/system/backup',     'backup/list/index',            '', '数据备份', 'Upload',     0, 2, 'system:backup:view',      8, 1, NOW(), NOW());
 
 -- =====================================================
 -- 二级菜单（个人中心）— 需求文档 12.2
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(801, 8, 'ProfileInfo',     '/profile/info',     'profile/info/index',     '', '个人信息', 'User',    0, 2, 'profile:view',    1, 1, NOW(), NOW()),
-(802, 8, 'ProfilePassword', '/profile/password', 'profile/password/index', '', '修改密码', 'Lock',    0, 2, 'profile:password',2, 1, NOW(), NOW()),
-(803, 8, 'ProfileMessage',  '/profile/message',  'profile/message/index',  '', '我的消息', 'Message', 0, 2, 'profile:message', 3, 1, NOW(), NOW());
+(801, 8, 'ProfileInfo',     '/profile/info',     'profile/info/index',     '', '个人信息', 'User',    0, 2, 'profile:info:view',    1, 1, NOW(), NOW()),
+(802, 8, 'ProfilePassword', '/profile/password', 'profile/password/index', '', '修改密码', 'Lock',    0, 2, 'profile:password:view',2, 1, NOW(), NOW()),
+(803, 8, 'ProfileMessage',  '/profile/message',  'profile/message/index',  '', '我的消息', 'Message', 0, 2, 'profile:message:view', 3, 1, NOW(), NOW());
 
 -- =====================================================
 -- 按钮权限（用户管理）
@@ -141,13 +141,13 @@ INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, 
 (30302, 303, 'ClassQUpdate',   '', '', '', '编辑班级题目', '', 0, 3, 'question:class:edit',     2, 1, NOW(), NOW()),
 (30303, 303, 'ClassQDelete',   '', '', '', '删除班级题目', '', 0, 3, 'question:class:delete',   3, 1, NOW(), NOW()),
 -- 分类按钮
-(30401, 304, 'CategoryCreate', '', '', '', '新增分类', '', 0, 3, 'category:create', 1, 1, NOW(), NOW()),
-(30402, 304, 'CategoryUpdate', '', '', '', '编辑分类', '', 0, 3, 'category:edit',   2, 1, NOW(), NOW()),
-(30403, 304, 'CategoryDelete', '', '', '', '删除分类', '', 0, 3, 'category:delete', 3, 1, NOW(), NOW()),
+(30401, 304, 'CategoryCreate', '', '', '', '新增分类', '', 0, 3, 'category:list:create', 1, 1, NOW(), NOW()),
+(30402, 304, 'CategoryUpdate', '', '', '', '编辑分类', '', 0, 3, 'category:list:edit',   2, 1, NOW(), NOW()),
+(30403, 304, 'CategoryDelete', '', '', '', '删除分类', '', 0, 3, 'category:list:delete', 3, 1, NOW(), NOW()),
 -- 知识点按钮
-(30501, 305, 'KnowledgeCreate','', '', '', '新增知识点', '', 0, 3, 'knowledge:create', 1, 1, NOW(), NOW()),
-(30502, 305, 'KnowledgeUpdate','', '', '', '编辑知识点', '', 0, 3, 'knowledge:edit',   2, 1, NOW(), NOW()),
-(30503, 305, 'KnowledgeDelete','', '', '', '删除知识点', '', 0, 3, 'knowledge:delete', 3, 1, NOW(), NOW());
+(30501, 305, 'KnowledgeCreate','', '', '', '新增知识点', '', 0, 3, 'knowledge:list:create', 1, 1, NOW(), NOW()),
+(30502, 305, 'KnowledgeUpdate','', '', '', '编辑知识点', '', 0, 3, 'knowledge:list:edit',   2, 1, NOW(), NOW()),
+(30503, 305, 'KnowledgeDelete','', '', '', '删除知识点', '', 0, 3, 'knowledge:list:delete', 3, 1, NOW(), NOW());
 
 -- =====================================================
 -- 按钮权限（考试管理）
@@ -163,16 +163,16 @@ INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, 
 (40302, 403, 'ExamUpdate',    '', '', '', '编辑考试', '', 0, 3, 'exam:publish:edit',   2, 1, NOW(), NOW()),
 (40303, 403, 'ExamDelete',    '', '', '', '删除考试', '', 0, 3, 'exam:publish:delete', 3, 1, NOW(), NOW()),
 -- 成绩按钮
-(40501, 405, 'ScoreExport',   '', '', '', '导出成绩', '', 0, 3, 'score:export', 1, 1, NOW(), NOW());
+(40501, 405, 'ScoreExport',   '', '', '', '导出成绩', '', 0, 3, 'score:list:export', 1, 1, NOW(), NOW());
 
 -- =====================================================
 -- 按钮权限（班级管理）
 -- =====================================================
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
-(50101, 501, 'ClassCreate',      '', '', '', '新增班级',       '', 0, 3, 'class:create',          1, 1, NOW(), NOW()),
-(50102, 501, 'ClassUpdate',      '', '', '', '编辑班级',       '', 0, 3, 'class:edit',            2, 1, NOW(), NOW()),
-(50103, 501, 'ClassDelete',      '', '', '', '删除班级',       '', 0, 3, 'class:delete',          3, 1, NOW(), NOW()),
+(50101, 501, 'ClassCreate',      '', '', '', '新增班级',       '', 0, 3, 'class:list:create',          1, 1, NOW(), NOW()),
+(50102, 501, 'ClassUpdate',      '', '', '', '编辑班级',       '', 0, 3, 'class:list:edit',            2, 1, NOW(), NOW()),
+(50103, 501, 'ClassDelete',      '', '', '', '删除班级',       '', 0, 3, 'class:list:delete',          3, 1, NOW(), NOW()),
 (50104, 501, 'ClassMemberManage','', '', '', '管理班级成员',   '', 0, 3, 'class:member:manage',   4, 1, NOW(), NOW()),
 (50301, 503, 'CreatorApprove',   '', '', '', '审批班级创作者', '', 0, 3, 'class:creator:approve', 1, 1, NOW(), NOW()),
 (50302, 503, 'CreatorReject',    '', '', '', '拒绝班级创作者', '', 0, 3, 'class:creator:reject',  2, 1, NOW(), NOW());
@@ -183,10 +183,10 @@ INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, 
 
 INSERT INTO menus (id, parent_id, name, path, component, redirect, title, icon, hidden, type, permission, sort, status, created_at, updated_at) VALUES
 (70101, 701, 'SettingEdit',     '', '', '', '修改设置', '', 0, 3, 'system:settings:edit',     1, 1, NOW(), NOW()),
-(70301, 703, 'RoleCreate',      '', '', '', '新增角色', '', 0, 3, 'role:create',              1, 1, NOW(), NOW()),
-(70302, 703, 'RoleUpdate',      '', '', '', '编辑角色', '', 0, 3, 'role:edit',                2, 1, NOW(), NOW()),
-(70303, 703, 'RoleDelete',      '', '', '', '删除角色', '', 0, 3, 'role:delete',              3, 1, NOW(), NOW()),
-(70304, 703, 'RoleAssign',      '', '', '', '分配权限', '', 0, 3, 'role:assign',              4, 1, NOW(), NOW()),
+(70301, 703, 'RoleCreate',      '', '', '', '新增角色', '', 0, 3, 'role:list:create',              1, 1, NOW(), NOW()),
+(70302, 703, 'RoleUpdate',      '', '', '', '编辑角色', '', 0, 3, 'role:list:edit',                2, 1, NOW(), NOW()),
+(70303, 703, 'RoleDelete',      '', '', '', '删除角色', '', 0, 3, 'role:list:delete',              3, 1, NOW(), NOW()),
+(70304, 703, 'RoleAssign',      '', '', '', '分配权限', '', 0, 3, 'role:list:assign',              4, 1, NOW(), NOW()),
 (70801, 708, 'BackupCreate',    '', '', '', '创建备份', '', 0, 3, 'system:backup:create',     1, 1, NOW(), NOW()),
 (70802, 708, 'BackupRestore',   '', '', '', '恢复备份', '', 0, 3, 'system:backup:restore',    2, 1, NOW(), NOW());
 

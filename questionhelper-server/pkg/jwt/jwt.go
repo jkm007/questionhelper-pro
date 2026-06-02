@@ -13,11 +13,12 @@ var jwtIssuer string = "questionhelper"
 
 // Claims JWT Claims
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-	RoleIDs  []uint `json:"role_ids"`
-	JTI      string `json:"jti"`  // JWT Unique Identifier
-	Type     string `json:"type"` // Token 类型: "access" 或 "refresh"（T28）
+	UserID    uint     `json:"user_id"`
+	Username  string   `json:"username"`
+	RoleIDs   []uint   `json:"role_ids"`
+	RoleCodes []string `json:"role_codes"` // 角色编码，用于中间件权限判断
+	JTI       string   `json:"jti"`        // JWT Unique Identifier
+	Type      string   `json:"type"`       // Token 类型: "access" 或 "refresh"（T28）
 	jwt.RegisteredClaims
 }
 
@@ -37,19 +38,20 @@ func GenerateJTI() string {
 }
 
 // GenerateToken 生成 Token（向后兼容，默认生成 access token）
-func GenerateToken(userID uint, username string, roleIDs []uint, expire int) (string, error) {
+func GenerateToken(userID uint, username string, roleIDs []uint, roleCodes []string, expire int) (string, error) {
 	jti := GenerateJTI()
-	return GenerateTokenWithJTI(userID, username, roleIDs, jti, expire, "access")
+	return GenerateTokenWithJTI(userID, username, roleIDs, roleCodes, jti, expire, "access")
 }
 
 // GenerateTokenWithJTI 生成带 JTI 的 Token（T27: 添加 Issuer 字段，T28: 添加 Type 字段）
-func GenerateTokenWithJTI(userID uint, username string, roleIDs []uint, jti string, expire int, tokenType string) (string, error) {
+func GenerateTokenWithJTI(userID uint, username string, roleIDs []uint, roleCodes []string, jti string, expire int, tokenType string) (string, error) {
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
-		RoleIDs:  roleIDs,
-		JTI:      jti,
-		Type:     tokenType,
+		UserID:    userID,
+		Username:  username,
+		RoleIDs:   roleIDs,
+		RoleCodes: roleCodes,
+		JTI:       jti,
+		Type:      tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expire) * time.Second)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

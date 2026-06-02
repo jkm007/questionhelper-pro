@@ -56,13 +56,13 @@ func RefreshToken(req *dto.RefreshTokenRequest, cfg *config.JWTConfig) (*dto.Log
 
 	// 生成新 Token（T28: 添加 type 字段区分 token 类型）
 	jti := jwt.GenerateJTI()
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, cfg.Expire, "access")
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, roleCodes, jti, cfg.Expire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, cfg.RefreshExpire, "refresh")
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, roleCodes, refreshJTI, cfg.RefreshExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -145,15 +145,22 @@ func SwitchRole(userID uint, roleID uint, cfg *config.JWTConfig, currentToken st
 
 	// 生成新的 Token 对（仅包含切换后的角色，T28: 添加 type 字段区分 token 类型）
 	newRoleIDs := []uint{roleID}
+	newRoleCodes := []string{}
+	for _, role := range u.Roles {
+		if role.ID == roleID {
+			newRoleCodes = append(newRoleCodes, role.Code)
+			break
+		}
+	}
 
 	jti := jwt.GenerateJTI()
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, newRoleIDs, jti, cfg.Expire, "access")
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, newRoleIDs, newRoleCodes, jti, cfg.Expire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, newRoleIDs, refreshJTI, cfg.RefreshExpire, "refresh")
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, newRoleIDs, newRoleCodes, refreshJTI, cfg.RefreshExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}

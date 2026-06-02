@@ -5,6 +5,7 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"time"
@@ -72,73 +73,111 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 		}
 	}
 
-	// 查找用户（支持用户名/邮箱/手机号）
-	u, err := FindByIdentifier(req.Username)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户名或密码错误")
-		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+	// 确定登录类型，默认为 password
+	loginType := req.LoginType
+	if loginType == "" {
+		loginType = "password"
 	}
 
-	// 检查用户状态
+	var u *model.User
+
+	switch loginType {
+	case "email_code":
+		// 邮箱验证码登录
+		if req.Username == "" {
+			return nil, errors.New("请输入邮箱")
+		}
+		if req.EmailCode == "" {
+			return nil, errors.New("请输入邮箱验证码")
+		}
+
+		// 验证邮箱验证码
+		if err := verifyEmailCode(req.Username, req.EmailCode); err != nil {
+			return nil, err
+		}
+
+		// 通过邮箱查找用户
+		u, err = user.FindByEmail(req.Username)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, errors.New("该邮箱未注册")
+			}
+			return nil, fmt.Errorf("查询用户失败: %w", err)
+		}
+
+	case "password":
+		// 密码登录（默认）
+		// 查找用户（支持用户名/邮箱/手机号）
+		u, err = FindByIdentifier(req.Username)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, errors.New("用户名或密码错误")
+			}
+			return nil, fmt.Errorf("查询用户失败: %w", err)
+		}
+
+		// 检查是否被锁定
+		if u.LockUntil != nil && u.LockUntil.After(time.Now()) {
+			remaining := time.Until(*u.LockUntil).Minutes()
+			return nil, fmt.Errorf("账号已被锁定，请 %.0f 分钟后再试", remaining)
+		}
+
+		// 验证验证码（密码错误3次后需要验证码）
+		if u.LoginFailCount >= 3 {
+			if req.CaptchaID == "" || req.Captcha == "" {
+				return nil, errors.New("请输入验证码")
+			}
+			// T30: 验证码尝试次数跟踪
+			ok, tooMany := captcha.VerifyCaptcha(req.CaptchaID, req.Captcha, req.CaptchaID)
+			if tooMany {
+				return nil, errors.New("验证码错误次数过多，请重新获取验证码")
+			}
+			if !ok {
+				return nil, errors.New("验证码错误")
+			}
+		}
+
+		// 验证密码
+		if !encrypt.CheckPassword(req.Password, u.Password) {
+			// 使用原子操作增加失败次数
+			if err := user.IncrementLoginFailCount(u.ID); err != nil {
+				logger.Errorf("更新登录失败次数失败: %v", err)
+			}
+			// 重新获取用户信息以获取最新的失败次数
+			u, _ = user.FindByUsername(req.Username)
+			newFailCount := u.LoginFailCount
+			if newFailCount >= maxLoginFailCount {
+				lockUntil := time.Now().Add(lockDuration)
+				user.UpdateByID(u.ID, map[string]interface{}{"lock_until": lockUntil})
+				logger.Warnf("用户 %s 登录失败 %d 次，账号已锁定 %v", req.Username, newFailCount, lockDuration)
+			}
+
+			// 记录登录日志
+			recordLoginLog(u, req, false, "密码错误")
+
+			return nil, errors.New("用户名或密码错误")
+		}
+
+		// 密码正确，重置失败次数
+		if u.LoginFailCount > 0 || u.LockUntil != nil {
+			if err := user.UpdateByID(u.ID, map[string]interface{}{
+				"login_fail_count": 0,
+				"lock_until":       nil,
+			}); err != nil {
+				logger.Errorf("重置登录失败次数失败: %v", err)
+			}
+		}
+
+	default:
+		return nil, errors.New("不支持的登录类型")
+	}
+
+	// 检查用户状态（两种登录类型共用）
 	if u.Status == 0 {
 		return nil, errors.New("账号已被禁用")
 	}
 	if u.Status == 2 {
 		return nil, errors.New("账号正在注销中")
-	}
-
-	// 检查是否被锁定
-	if u.LockUntil != nil && u.LockUntil.After(time.Now()) {
-		remaining := time.Until(*u.LockUntil).Minutes()
-		return nil, fmt.Errorf("账号已被锁定，请 %.0f 分钟后再试", remaining)
-	}
-
-	// 验证验证码（密码错误3次后需要验证码）
-	if u.LoginFailCount >= 3 {
-		if req.CaptchaID == "" || req.Captcha == "" {
-			return nil, errors.New("请输入验证码")
-		}
-		// T30: 验证码尝试次数跟踪
-		ok, tooMany := captcha.VerifyCaptcha(req.CaptchaID, req.Captcha, req.CaptchaID)
-		if tooMany {
-			return nil, errors.New("验证码错误次数过多，请重新获取验证码")
-		}
-		if !ok {
-			return nil, errors.New("验证码错误")
-		}
-	}
-
-	// 验证密码
-	if !encrypt.CheckPassword(req.Password, u.Password) {
-		// 使用原子操作增加失败次数
-		if err := user.IncrementLoginFailCount(u.ID); err != nil {
-			logger.Errorf("更新登录失败次数失败: %v", err)
-		}
-		// 重新获取用户信息以获取最新的失败次数
-		u, _ = user.FindByUsername(req.Username)
-		newFailCount := u.LoginFailCount
-		if newFailCount >= maxLoginFailCount {
-			lockUntil := time.Now().Add(lockDuration)
-			user.UpdateByID(u.ID, map[string]interface{}{"lock_until": lockUntil})
-			logger.Warnf("用户 %s 登录失败 %d 次，账号已锁定 %v", req.Username, newFailCount, lockDuration)
-		}
-
-		// 记录登录日志
-		recordLoginLog(u, req, false, "密码错误")
-
-		return nil, errors.New("用户名或密码错误")
-	}
-
-	// 密码正确，重置失败次数
-	if u.LoginFailCount > 0 || u.LockUntil != nil {
-		if err := user.UpdateByID(u.ID, map[string]interface{}{
-			"login_fail_count": 0,
-			"lock_until":       nil,
-		}); err != nil {
-			logger.Errorf("重置登录失败次数失败: %v", err)
-		}
 	}
 
 	// 更新最后登录信息
@@ -178,14 +217,14 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 	}
 
 	// 生成 Access Token（T28: 添加 type 字段区分 token 类型）
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, accessTokenExpire, "access")
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, roleCodes, jti, accessTokenExpire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	// 生成 Refresh Token（T28: 添加 type 字段区分 token 类型）
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, refreshTokenExpire, "refresh")
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, roleCodes, refreshJTI, refreshTokenExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -196,7 +235,7 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 	// T20: 登录成功，清除 IP 频率限制计数器
 	database.RDB.Del(ctx, limitKey)
 
-	logger.Infof("用户 %s 登录成功", req.Username)
+	logger.Infof("用户 %s 登录成功 (方式: %s)", req.Username, loginType)
 
 	return &dto.LoginResponse{
 		AccessToken:  accessToken,
@@ -207,7 +246,14 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 			ID:        u.ID,
 			Username:  u.Username,
 			Nickname:  u.Nickname,
+			Email:     u.Email,
+			Phone:     u.Phone,
 			Avatar:    u.Avatar,
+			Gender:    u.Gender,
+			Birthday:  u.Birthday,
+			Bio:       u.Bio,
+			Status:    u.Status,
+			IsReal:    u.IsReal,
 			Roles:     buildRoleInfos(u.Roles),
 			CreatedAt: u.CreatedAt,
 		},
@@ -340,13 +386,13 @@ func Register(req *dto.RegisterRequest, cfg *config.JWTConfig) (*dto.LoginRespon
 
 	// T07: 注册后自动登录，返回 Token（T28: 添加 type 字段区分 token 类型）
 	jti := jwt.GenerateJTI()
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, cfg.Expire, "access")
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, roleCodes, jti, cfg.Expire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, cfg.RefreshExpire, "refresh")
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, roleCodes, refreshJTI, cfg.RefreshExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -548,12 +594,20 @@ func RequestPasswordReset(req *dto.RequestPasswordResetRequest) error {
 
 	// T22: 发送重置邮件（如果邮箱存在）
 	if u.Email != "" {
-		// TODO: 调用邮件服务发送重置链接
-		logger.Infof("密码重置邮件应发送至: %s", u.Email)
+		sendResetEmail(u.Email, resetToken)
 	}
 
 	logger.Infof("密码重置令牌已生成: user_id=%d", u.ID)
 	return nil
+}
+
+// sendResetEmail 发送密码重置邮件
+// TODO: 项目配置 SMTP 后替换为真实的邮件发送逻辑
+func sendResetEmail(emailAddr, code string) {
+	// 开发阶段：将验证码打印到日志，方便调试
+	// 生产环境应调用 email.SendPasswordResetCode(emailAddr, code) 发送真实邮件
+	log.Printf("[密码重置] 邮箱: %s, 验证码: %s (5分钟内有效)", emailAddr, code)
+	logger.Infof("密码重置验证码已生成: email=%s (开发阶段仅记录日志)", emailAddr)
 }
 
 // verifyEmailCode 验证邮箱验证码（T06/T08 辅助函数）
@@ -788,6 +842,100 @@ func ExportUserData(userID uint) (*dto.UserDataExport, error) {
 		return nil, errors.New("用户不存在")
 	}
 
+	// 查询考试记录
+	var examRecords []model.ExamRecord
+	if err := database.DB.Where("user_id = ?", userID).Find(&examRecords).Error; err != nil {
+		logger.Errorf("导出考试记录失败: %v", err)
+	}
+	exams := make([]interface{}, 0, len(examRecords))
+	for _, r := range examRecords {
+		exams = append(exams, map[string]interface{}{
+			"id":            r.ID,
+			"exam_id":       r.ExamID,
+			"score":         r.Score,
+			"obj_score":     r.ObjScore,
+			"subj_score":    r.SubjScore,
+			"status":        r.Status,
+			"start_time":    r.StartTime,
+			"submit_time":   r.SubmitTime,
+			"duration_used": r.DurationUsed,
+			"created_at":    r.CreatedAt,
+		})
+	}
+
+	// 查询练习记录
+	var practiceSessions []model.PracticeSession
+	if err := database.DB.Where("user_id = ?", userID).Find(&practiceSessions).Error; err != nil {
+		logger.Errorf("导出练习记录失败: %v", err)
+	}
+	practices := make([]interface{}, 0, len(practiceSessions))
+	for _, p := range practiceSessions {
+		practices = append(practices, map[string]interface{}{
+			"id":            p.ID,
+			"category_id":   p.CategoryID,
+			"total_count":   p.TotalCount,
+			"correct_count": p.CorrectCount,
+			"accuracy":      p.Accuracy,
+			"duration":      p.Duration,
+			"status":        p.Status,
+			"created_at":    p.CreatedAt,
+		})
+	}
+
+	// 查询错题
+	var wrongQuestions []model.WrongQuestion
+	if err := database.DB.Where("user_id = ?", userID).Find(&wrongQuestions).Error; err != nil {
+		logger.Errorf("导出错题失败: %v", err)
+	}
+	wrongQs := make([]interface{}, 0, len(wrongQuestions))
+	for _, wq := range wrongQuestions {
+		wrongQs = append(wrongQs, map[string]interface{}{
+			"id":             wq.ID,
+			"question_id":    wq.QuestionID,
+			"source":         wq.Source,
+			"source_id":      wq.SourceID,
+			"wrong_count":    wq.WrongCount,
+			"last_answer":    wq.LastAnswer,
+			"mastered":       wq.Mastered,
+			"correct_streak": wq.CorrectStreak,
+			"created_at":     wq.CreatedAt,
+		})
+	}
+
+	// 查询收藏（题目收藏）
+	var favorites []model.QuestionFavorite
+	if err := database.DB.Where("user_id = ?", userID).Find(&favorites).Error; err != nil {
+		logger.Errorf("导出收藏失败: %v", err)
+	}
+	favs := make([]interface{}, 0, len(favorites))
+	for _, f := range favorites {
+		favs = append(favs, map[string]interface{}{
+			"id":          f.ID,
+			"question_id": f.QuestionID,
+			"folder_id":   f.FolderID,
+			"note":        f.Note,
+			"created_at":  f.CreatedAt,
+		})
+	}
+
+	// 查询评论
+	var comments []model.Comment
+	if err := database.DB.Where("user_id = ?", userID).Find(&comments).Error; err != nil {
+		logger.Errorf("导出评论失败: %v", err)
+	}
+	cmts := make([]interface{}, 0, len(comments))
+	for _, c := range comments {
+		cmts = append(cmts, map[string]interface{}{
+			"id":          c.ID,
+			"target_type": c.TargetType,
+			"target_id":   c.TargetID,
+			"content":     c.Content,
+			"like_count":  c.LikeCount,
+			"status":      c.Status,
+			"created_at":  c.CreatedAt,
+		})
+	}
+
 	export := &dto.UserDataExport{
 		ExportAt: time.Now(),
 		User: map[string]interface{}{
@@ -797,12 +945,11 @@ func ExportUserData(userID uint) (*dto.UserDataExport, error) {
 			"email":    u.Email,
 			"phone":    u.Phone,
 		},
-		// TODO: 获取考试、练习、错题、收藏、评论数据
-		Exams:          []interface{}{},
-		Practices:      []interface{}{},
-		WrongQuestions: []interface{}{},
-		Favorites:      []interface{}{},
-		Comments:       []interface{}{},
+		Exams:          exams,
+		Practices:      practices,
+		WrongQuestions: wrongQs,
+		Favorites:      favs,
+		Comments:       cmts,
 	}
 
 	return export, nil

@@ -234,17 +234,19 @@ func OAuthLogin(provider, code, state string) (*dto.LoginResponse, error) {
 	jti := jwt.GenerateJTI()
 
 	roleIDs := make([]uint, 0, len(localUser.Roles))
+	roleCodes := make([]string, 0, len(localUser.Roles))
 	for _, role := range localUser.Roles {
 		roleIDs = append(roleIDs, role.ID)
+		roleCodes = append(roleCodes, role.Code)
 	}
 
-	accessTokenJWT, err := jwt.GenerateTokenWithJTI(localUser.ID, localUser.Username, roleIDs, jti, jwtCfg.Expire, "access")
+	accessTokenJWT, err := jwt.GenerateTokenWithJTI(localUser.ID, localUser.Username, roleIDs, roleCodes, jti, jwtCfg.Expire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	refreshJTI := jwt.GenerateJTI()
-	refreshTokenJWT, err := jwt.GenerateTokenWithJTI(localUser.ID, localUser.Username, roleIDs, refreshJTI, jwtCfg.RefreshExpire, "refresh")
+	refreshTokenJWT, err := jwt.GenerateTokenWithJTI(localUser.ID, localUser.Username, roleIDs, roleCodes, refreshJTI, jwtCfg.RefreshExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}

@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"questionhelper-server/pkg/database"
 )
 
 // DataPermissionType 数据权限类型（与数据库设计文档 02-权限管理 保持一致）
@@ -27,11 +26,8 @@ func DataPermissionMiddleware(tableName string) gin.HandlerFunc {
 			return
 		}
 
-		// 获取用户角色
-		roleIDs, _ := c.Get("role_ids")
-
 		// 管理员拥有全部权限
-		if isAdmin(roleIDs.([]uint)) {
+		if isAdmin(c) {
 			c.Next()
 			return
 		}
@@ -46,12 +42,18 @@ func DataPermissionMiddleware(tableName string) gin.HandlerFunc {
 }
 
 // isAdmin 判断是否为管理员（super_admin 或 admin 角色）
-func isAdmin(roleIDs []uint) bool {
-	var count int64
-	database.DB.Table("roles").
-		Where("id IN ? AND code IN ?", roleIDs, []string{"super_admin", "admin"}).
-		Count(&count)
-	return count > 0
+// 优先从 JWT 上下文中的 role_codes 判断，避免每次查数据库
+func isAdmin(c *gin.Context) bool {
+	if codes, exists := c.Get("role_codes"); exists {
+		if roleCodes, ok := codes.([]string); ok {
+			for _, code := range roleCodes {
+				if code == "super_admin" || code == "admin" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // ApplyDataPermission 应用数据权限到查询
