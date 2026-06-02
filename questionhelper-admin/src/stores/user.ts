@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { getToken, setToken, removeToken, setRefreshToken, removeRefreshToken } from "@/utils/auth";
 import { loginApi, getUserInfoApi, logoutApi } from "@/api/auth";
+import { usePermissionStore } from "@/stores/permission";
 
 interface UserInfo {
   id: number;
@@ -26,7 +27,15 @@ export const useUserStore = defineStore("user", () => {
 
   async function getUserInfo() {
     const data: any = await getUserInfoApi();
-    userInfo.value = data;
+    // 后端返回 roles 为 RoleInfo[] 对象数组，需转换为 string[] 角色编码
+    const roles = Array.isArray(data.roles)
+      ? data.roles.map((r: any) => (typeof r === "string" ? r : r.code))
+      : [];
+    userInfo.value = {
+      ...data,
+      roles,
+      permissions: data.permissions || [],
+    };
     return data;
   }
 
@@ -44,8 +53,13 @@ export const useUserStore = defineStore("user", () => {
 
   function hasPermission(perm: string): boolean {
     if (!userInfo.value) return false;
-    if (userInfo.value.roles.includes("super_admin")) return true;
-    return userInfo.value.permissions.includes(perm);
+    // 管理员角色拥有全部权限
+    if (userInfo.value.roles.includes("admin")) return true;
+    // 检查用户权限列表（来自后端 UserInfo.permissions）
+    if (userInfo.value.permissions.includes(perm)) return true;
+    // 检查按钮权限列表（来自 GET /menus/buttons）
+    const permissionStore = usePermissionStore();
+    return permissionStore.buttons.includes(perm);
   }
 
   return { token, userInfo, login, getUserInfo, logout, hasPermission };

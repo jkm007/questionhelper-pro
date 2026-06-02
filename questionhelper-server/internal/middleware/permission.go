@@ -69,12 +69,10 @@ func AdminOnly() gin.HandlerFunc {
 			return
 		}
 
-		// 检查是否包含管理员角色（ID=1 为超级管理员）
-		for _, id := range ids {
-			if id == 1 {
-				c.Next()
-				return
-			}
+		// 通过数据库查询角色编码，而非硬编码 ID（与 data_permission.go 保持一致）
+		if isAdmin(ids) {
+			c.Next()
+			return
 		}
 
 		response.Error(c, http.StatusForbidden, "需要管理员权限")
