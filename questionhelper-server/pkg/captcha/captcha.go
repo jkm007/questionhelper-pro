@@ -62,10 +62,10 @@ func GenerateCaptcha(captchaType CaptchaType) (id string, b64s string, err error
 	switch captchaType {
 	case CaptchaTypeLetter:
 		// 字母+数字验证码：6位，中等干扰
-		driver = base64Captcha.NewDriverString(80, 240, 5, base64Captcha.ShowLineSimple, 6, "abcdefghjkmnpqrstuvwxyz23456789", nil, nil, nil)
+		driver = base64Captcha.NewDriverString(80, 240, 5, base64Captcha.OptionShowHollowLine, 6, "abcdefghjkmnpqrstuvwxyz23456789", nil, nil, nil)
 	case CaptchaTypeMath:
 		// 数学运算验证码：如 "3+5=?"
-		driver = base64Captcha.NewDriverMath(80, 240, 5, base64Captcha.ShowLineSimple, nil, nil, nil)
+		driver = base64Captcha.NewDriverMath(80, 240, 5, base64Captcha.OptionShowHollowLine, nil, nil, nil)
 	default:
 		// 默认纯数字验证码（向后兼容）
 		driver = base64Captcha.NewDriverDigit(80, 240, 5, 0.7, 80)

@@ -5,6 +5,9 @@ export const useExam = () => {
   const remaining = ref(0) // 剩余时间（秒）
   const isRunning = ref(false)
   let timer: ReturnType<typeof setInterval> | null = null
+  let syncTimer: ReturnType<typeof setInterval> | null = null
+  let serverTimestamp = 0
+  let localTimestamp = 0
 
   // 格式化时间
   const formattedTime = computed(() => {
@@ -21,11 +24,24 @@ export const useExam = () => {
   // 是否时间紧迫（小于5分钟）
   const isUrgent = computed(() => remaining.value < 300 && remaining.value > 0)
 
+  // 同步服务端时间（预留接口）
+  const syncWithServer = () => {
+    // TODO: 调用后端获取服务端时间戳
+  }
+
   // 开始计时
-  const start = (seconds: number) => {
+  const start = (seconds: number, serverTs?: number) => {
     duration.value = seconds
     remaining.value = seconds
     isRunning.value = true
+
+    if (serverTs) {
+      serverTimestamp = serverTs
+      localTimestamp = Date.now()
+      syncTimer = setInterval(() => {
+        syncWithServer()
+      }, 60000)
+    }
 
     timer = setInterval(() => {
       if (remaining.value > 0) {
@@ -64,6 +80,10 @@ export const useExam = () => {
     if (timer) {
       clearInterval(timer)
       timer = null
+    }
+    if (syncTimer) {
+      clearInterval(syncTimer)
+      syncTimer = null
     }
     isRunning.value = false
   }

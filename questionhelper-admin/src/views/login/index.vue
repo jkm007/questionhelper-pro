@@ -1,21 +1,29 @@
 <template>
-  <div class="login-container">
-    <el-card class="login-card">
-      <h2>题小助管理后台</h2>
-      <el-form ref="formRef" :model="form" :rules="rules" @keyup.enter="handleLogin">
-        <el-form-item prop="username">
-          <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" />
-        </el-form-item>
-        <el-form-item prop="password">
-          <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="loading" style="width: 100%" @click="handleLogin">
-            登录
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+  <div class="login-container" :style="{ backgroundImage: `url(/images/login-bg.png)` }">
+    <div class="login-content">
+      <div class="login-left">
+        <img src="/images/login-illustration.png" alt="login" class="login-illustration" />
+      </div>
+      <el-card class="login-card">
+        <div class="login-header">
+          <img src="/images/logo.png" alt="logo" class="login-logo" />
+          <h2>题小助管理后台</h2>
+        </div>
+        <el-form ref="formRef" :model="form" :rules="rules" @keyup.enter="handleLogin">
+          <el-form-item prop="username">
+            <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" size="large" />
+          </el-form-item>
+          <el-form-item prop="password">
+            <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" show-password size="large" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" :loading="loading" size="large" style="width: 100%" @click="handleLogin">
+              登录
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </div>
   </div>
 </template>
 
@@ -60,13 +68,36 @@ async function handleLogin() {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  background: #f0f2f5;
+  background-size: cover;
+  background-position: center;
+}
+.login-content {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+.login-left {
+  flex-shrink: 0;
+}
+.login-illustration {
+  width: 300px;
+  height: auto;
 }
 .login-card {
   width: 400px;
 }
-h2 {
+.login-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
+}
+.login-logo {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 12px;
+}
+h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #303133;
 }
 </style>

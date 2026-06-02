@@ -97,7 +97,7 @@
 
     <!-- Copyright -->
     <view class="copyright-section">
-      <text class="copyright-text">Copyright &copy; 2024 题小助</text>
+      <text class="copyright-text">Copyright &copy; 2026 题小助</text>
       <text class="copyright-text">All Rights Reserved</text>
       <text class="copyright-sub">本应用由题小助团队开发并维护</text>
     </view>
@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-const appVersion = ref('1.0.0')
+const appVersion = ref('2.0.0')
 const updateStatus = ref('已是最新版本')
 const cacheSize = ref('0 KB')
 const checking = ref(false)
@@ -116,13 +116,13 @@ function getAppVersion() {
   try {
     // #ifdef MP-WEIXIN
     const accountInfo = uni.getAccountInfoSync()
-    appVersion.value = accountInfo.miniProgram?.version || '1.0.0'
+    appVersion.value = accountInfo.miniProgram?.version || '2.0.0'
     // #endif
     // #ifndef MP-WEIXIN
-    appVersion.value = '1.0.0'
+    appVersion.value = '2.0.0'
     // #endif
   } catch (e) {
-    appVersion.value = '1.0.0'
+    appVersion.value = '2.0.0'
   }
 }
 

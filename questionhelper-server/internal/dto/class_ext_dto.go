@@ -334,13 +334,15 @@ type CalculateRankingRequest struct {
 
 // ClassTagCreateRequest 创建班级标签请求
 type ClassTagCreateRequest struct {
-	Name string `json:"name" binding:"required,max=50"`
+	Name      string `json:"name" binding:"required,max=50"`
+	SortOrder int    `json:"sort_order"`
 }
 
 // ClassTagUpdateRequest 更新班级标签请求
 type ClassTagUpdateRequest struct {
-	Name   string `json:"name" binding:"omitempty,max=50"`
-	Status int8   `json:"status" binding:"omitempty,oneof=0 1"`
+	Name      string `json:"name" binding:"omitempty,max=50"`
+	Status    int8   `json:"status" binding:"omitempty,oneof=0 1"`
+	SortOrder int    `json:"sort_order"`
 }
 
 // ClassTagInfo 班级标签信息
@@ -349,6 +351,7 @@ type ClassTagInfo struct {
 	Name      string    `json:"name"`
 	CreatorID uint      `json:"creator_id"`
 	Status    int8      `json:"status"`
+	SortOrder int       `json:"sort_order"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

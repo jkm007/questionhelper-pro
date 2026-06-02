@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
+import { wsClient } from '@/utils/websocket'
+import { isLoggedIn } from '@/utils/auth'
 
 onLaunch(() => {
   console.log('App Launch')
+  // 已登录则连接 WebSocket
+  if (isLoggedIn()) {
+    wsClient.connect()
+  }
+
+  // 监听网络恢复，自动重连 WebSocket
+  uni.onNetworkStatusChange((res) => {
+    if (res.isConnected && isLoggedIn()) {
+      wsClient.connect()
+    }
+  })
 })
 
 onShow(() => {

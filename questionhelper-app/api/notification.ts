@@ -33,6 +33,27 @@ export const getNotificationDetail = (id: number) => {
   return request({ url: `/notifications/${id}` })
 }
 
+// 获取通知设置
+export const getNotificationSettings = () => {
+  return request({ url: '/notifications/settings' })
+}
+
+// 更新通知设置
+export const updateNotificationSettings = (data: {
+  systemEnabled?: boolean
+  examEnabled?: boolean
+  homeworkEnabled?: boolean
+  classEnabled?: boolean
+  commentEnabled?: boolean
+}) => {
+  return request({ url: '/notifications/settings', method: 'PUT', data })
+}
+
+// 获取通知统计
+export const getNotificationStats = () => {
+  return request({ url: '/notifications/stats' })
+}
+
 // 类型定义
 export interface NotificationItem {
   id: number

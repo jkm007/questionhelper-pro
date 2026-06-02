@@ -9,6 +9,7 @@ import (
 )
 
 var jwtSecret []byte
+var jwtIssuer string = "questionhelper"
 
 // Claims JWT Claims
 type Claims struct {
@@ -20,9 +21,12 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// Init 初始化 JWT 密钥
-func Init(secret string) {
+// Init 初始化 JWT 密钥和 Issuer
+func Init(secret string, issuer ...string) {
 	jwtSecret = []byte(secret)
+	if len(issuer) > 0 && issuer[0] != "" {
+		jwtIssuer = issuer[0]
+	}
 }
 
 // GenerateJTI 生成唯一的 JTI
@@ -45,12 +49,12 @@ func GenerateTokenWithJTI(userID uint, username string, roleIDs []uint, jti stri
 		Username: username,
 		RoleIDs:  roleIDs,
 		JTI:      jti,
-		Type:     tokenType, // T28: 区分 access/refresh token
+		Type:     tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expire) * time.Second)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ID:        jti,
-			Issuer:    "questionhelper", // T27: 设置 Issuer
+			Issuer:    jwtIssuer,
 		},
 	}
 

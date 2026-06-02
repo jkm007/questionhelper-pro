@@ -1,9 +1,13 @@
 <template>
   <div class="app-wrapper">
     <el-container>
-      <el-aside width="210px" class="sidebar">
+      <el-aside :width="appStore.sidebarCollapsed ? '64px' : '210px'" class="sidebar">
         <div class="logo">
-          <h3>题小助</h3>
+          <img v-if="appStore.sidebarCollapsed" src="/images/logo-sm.png" alt="logo" class="logo-img-sm" />
+          <template v-else>
+            <img src="/images/logo.png" alt="logo" class="logo-img" />
+            <span class="logo-text">题小助</span>
+          </template>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -47,7 +51,8 @@
           <div class="navbar-right">
             <el-dropdown>
               <span class="user-info">
-                {{ userStore.userInfo?.nickname || "管理员" }}
+                <el-avatar :size="28" :src="userStore.userInfo?.avatar || '/images/default-avatar.png'" />
+                <span class="username">{{ userStore.userInfo?.nickname || "管理员" }}</span>
                 <el-icon><ArrowDown /></el-icon>
               </span>
               <template #dropdown>
@@ -101,13 +106,29 @@ async function handleLogout() {
 .sidebar {
   background: #304156;
   overflow-y: auto;
+  transition: width 0.3s;
 }
 .logo {
   height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   color: #fff;
+  padding: 0 12px;
+}
+.logo-img {
+  width: 32px;
+  height: 32px;
+}
+.logo-img-sm {
+  width: 32px;
+  height: 32px;
+}
+.logo-text {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .navbar {
   display: flex;
@@ -129,6 +150,10 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   cursor: pointer;
-  gap: 4px;
+  gap: 8px;
+}
+.username {
+  font-size: 14px;
+  color: #303133;
 }
 </style>

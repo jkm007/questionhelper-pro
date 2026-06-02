@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,12 +10,15 @@ import (
 
 	"questionhelper-server/internal/router"
 	"questionhelper-server/internal/service/file"
+	"questionhelper-server/internal/task"
 	"questionhelper-server/internal/ws"
 	"questionhelper-server/pkg/config"
 	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/email"
 	"questionhelper-server/pkg/jwt"
 	"questionhelper-server/pkg/logger"
+	"questionhelper-server/pkg/mq"
+	"questionhelper-server/pkg/mq/handler"
 	"questionhelper-server/pkg/sms"
 )
 
@@ -41,6 +45,29 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 	logger.Info("WebSocket Hub 已启动")
+
+	// 初始化消息队列并注册消费者
+	mqInstance := mq.NewRedisStream()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	registerMQConsumers(ctx, mqInstance)
+
+	// 启动定时任务调度器
+	scheduler := task.NewScheduler()
+	scheduler.Start()
+	defer scheduler.Stop()
+
+	// 初始化延迟队列处理器
+	delayQueue := mq.NewRedisDelayQueue("qh:delay:queue")
+	go func() {
+		if err := delayQueue.Process(func(taskType string, payload []byte) error {
+			logger.Infof("处理延迟任务: type=%s", taskType)
+			return nil
+		}); err != nil {
+			logger.Errorf("延迟队列处理器退出: %v", err)
+		}
+	}()
 
 	// 将 config.EmailConfig 转换为 email.EmailConfig
 	email.Init(&email.EmailConfig{
@@ -75,4 +102,27 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	logger.Info("服务正在关闭...")
+
+	// 优雅关闭
+	cancel()
+	mqInstance.Close()
+}
+
+// registerMQConsumers 注册所有 MQ 消费者
+func registerMQConsumers(ctx context.Context, mqInstance mq.MQ) {
+	// 考试提交消费者
+	go func() {
+		if err := mqInstance.Subscribe(ctx, "job:exam_submit", handler.ExamSubmitHandler); err != nil {
+			logger.Errorf("考试提交消费者退出: %v", err)
+		}
+	}()
+
+	// 通知消费者
+	go func() {
+		if err := mqInstance.Subscribe(ctx, "job:notification", handler.NotificationHandler); err != nil {
+			logger.Errorf("通知消费者退出: %v", err)
+		}
+	}()
+
+	logger.Info("MQ 消费者已注册")
 }

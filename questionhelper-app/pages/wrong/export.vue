@@ -174,8 +174,8 @@ const filters = ref({
 
 const masteryLabels: Record<string, string> = {
   low: '未掌握',
-  medium: '初步掌握',
-  high: '基本掌握'
+  medium: '部分掌握',
+  high: '已掌握'
 }
 
 const typeLabels: Record<string, string> = {
@@ -199,8 +199,8 @@ const previewMasterySummary = computed(() => {
   const high = previewList.value.filter((i) => i.masteryLevel >= 70).length
   const parts = []
   if (low > 0) parts.push(`${low} 题未掌握`)
-  if (med > 0) parts.push(`${med} 题初步掌握`)
-  if (high > 0) parts.push(`${high} 题基本掌握`)
+  if (med > 0) parts.push(`${med} 题部分掌握`)
+  if (high > 0) parts.push(`${high} 题已掌握`)
   return parts.join('，')
 })
 

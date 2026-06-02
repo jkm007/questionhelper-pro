@@ -64,3 +64,73 @@ export const resumePractice = (id: number) => {
 export const finishPractice = (id: number) => {
   return request({ url: `/practice/${id}/finish`, method: 'POST' })
 }
+
+// 获取学习计划列表
+export const getPlans = (params?: { page?: number; pageSize?: number }) => {
+  return request({ url: '/practice/plans', data: params })
+}
+
+// 创建学习计划
+export const createPlan = (data: any) => {
+  return request({ url: '/practice/plans', method: 'POST', data })
+}
+
+// 获取学习计划详情
+export const getPlan = (id: number) => {
+  return request({ url: `/practice/plans/${id}` })
+}
+
+// 更新学习计划
+export const updatePlan = (id: number, data: any) => {
+  return request({ url: `/practice/plans/${id}`, method: 'PUT', data })
+}
+
+// 删除学习计划
+export const deletePlan = (id: number) => {
+  return request({ url: `/practice/plans/${id}`, method: 'DELETE' })
+}
+
+// 执行学习计划
+export const executePlan = (id: number) => {
+  return request({ url: `/practice/plans/${id}/execute`, method: 'POST' })
+}
+
+// 获取今日练习
+export const getTodayPractice = () => {
+  return request({ url: '/practice/daily/today' })
+}
+
+// 完成每日练习
+export const completeDailyPractice = (data: any) => {
+  return request({ url: '/practice/daily/complete', method: 'POST', data })
+}
+
+// 签到
+export const checkin = () => {
+  return request({ url: '/practice/checkin', method: 'POST' })
+}
+
+// 获取签到日历
+export const getCheckinCalendar = (params?: { month?: string }) => {
+  return request({ url: '/practice/checkin/calendar', data: params })
+}
+
+// 获取排行榜
+export const getLeaderboard = (params?: { type?: number; page?: number; pageSize?: number }) => {
+  return request({ url: '/practice/leaderboard', data: params })
+}
+
+// 开始模拟考试
+export const startMockExam = (data: any) => {
+  return request({ url: '/practice/mock/start', method: 'POST', data })
+}
+
+// 获取模拟考试历史
+export const getMockExamHistory = (params?: { page?: number; pageSize?: number }) => {
+  return request({ url: '/practice/mock/history', data: params })
+}
+
+// 提交模拟考试
+export const submitMockExam = (id: number, data: any) => {
+  return request({ url: `/practice/mock/${id}/submit`, method: 'POST', data })
+}

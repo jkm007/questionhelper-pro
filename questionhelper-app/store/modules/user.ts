@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getToken, setToken, removeToken, getUserInfo, setUserInfo, removeUserInfo } from '@/utils/auth'
+import { getToken, setToken, removeToken, setRefreshToken, removeRefreshToken, getUserInfo, setUserInfo, removeUserInfo } from '@/utils/auth'
 import { login as loginApi, logout as logoutApi } from '@/api/auth'
 import { getProfile } from '@/api/user'
 
@@ -18,6 +18,9 @@ export const useUserStore = defineStore('user', () => {
     const res = await loginApi({ username, password })
     token.value = res.data.accessToken
     setToken(res.data.accessToken)
+    if (res.data.refreshToken) {
+      setRefreshToken(res.data.refreshToken)
+    }
     if (res.data.user) {
       userInfo.value = res.data.user
       setUserInfo(res.data.user)
@@ -43,6 +46,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     userInfo.value = null
     removeToken()
+    removeRefreshToken()
     removeUserInfo()
   }
 
