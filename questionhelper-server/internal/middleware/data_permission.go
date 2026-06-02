@@ -8,15 +8,14 @@ import (
 	"questionhelper-server/pkg/database"
 )
 
-// DataPermissionType 数据权限类型
+// DataPermissionType 数据权限类型（与数据库设计文档 02-权限管理 保持一致）
 type DataPermissionType int
 
 const (
 	DataPermissionAll     DataPermissionType = 1 // 全部数据
-	DataPermissionCustom  DataPermissionType = 2 // 自定义数据
-	DataPermissionDept    DataPermissionType = 3 // 部门数据
-	DataPermissionDeptSub DataPermissionType = 4 // 部门及以下数据
-	DataPermissionSelf    DataPermissionType = 5 // 仅本人数据
+	DataPermissionDeptSub DataPermissionType = 2 // 本部门及下级
+	DataPermissionDept    DataPermissionType = 3 // 本部门
+	DataPermissionSelf    DataPermissionType = 4 // 仅本人数据
 )
 
 // DataPermissionMiddleware 数据权限中间件

@@ -11,7 +11,6 @@ import (
 	logCtrl "questionhelper-server/internal/controller/log"
 	"questionhelper-server/internal/controller/menu"
 	"questionhelper-server/internal/controller/notification"
-	"questionhelper-server/internal/controller/permission"
 	"questionhelper-server/internal/controller/practice"
 	"questionhelper-server/internal/controller/question"
 	"questionhelper-server/internal/controller/statistics"
@@ -70,7 +69,6 @@ func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 	fileAdminCtrl := file.NewFileAdminController()
 	systemCtrl := system.NewSystemController()
 	contentCtrl := content.NewContentController()
-	permissionCtrl := permission.NewPermissionController()
 
 	v1 := r.Group("/api/v1")
 	{
@@ -112,9 +110,9 @@ func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 			SetupAdminSystemRoutes(admin, systemCtrl)
 			SetupAdminNotificationRoutes(admin, notificationAdminCtrl)
 			SetupAdminCommentRoutes(admin, commentAdminCtrl)
+			SetupAdminContentRoutes(admin, contentCtrl)
 			SetupAdminStatisticsRoutes(admin, statisticsAdminCtrl, statisticsCtrl)
 			SetupAdminFileRoutes(admin, fileAdminCtrl)
-			SetupAdminButtonPermissionRoutes(admin, permissionCtrl)
 		}
 	}
 

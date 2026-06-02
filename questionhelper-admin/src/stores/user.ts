@@ -10,7 +10,6 @@ interface UserInfo {
   nickname: string;
   avatar: string;
   roles: string[];
-  permissions: string[];
 }
 
 export const useUserStore = defineStore("user", () => {
@@ -31,11 +30,7 @@ export const useUserStore = defineStore("user", () => {
     const roles = Array.isArray(data.roles)
       ? data.roles.map((r: any) => (typeof r === "string" ? r : r.code))
       : [];
-    userInfo.value = {
-      ...data,
-      roles,
-      permissions: data.permissions || [],
-    };
+    userInfo.value = { ...data, roles };
     return data;
   }
 
@@ -55,9 +50,7 @@ export const useUserStore = defineStore("user", () => {
     if (!userInfo.value) return false;
     // 超级管理员拥有全部权限（需求文档 11.4）
     if (userInfo.value.roles.includes("super_admin")) return true;
-    // 检查用户权限列表（来自后端 UserInfo.permissions）
-    if (userInfo.value.permissions.includes(perm)) return true;
-    // 检查按钮权限列表（来自 GET /menus/buttons）
+    // 检查按钮权限列表（来自 GET /menus/buttons，menus.type=3）
     const permissionStore = usePermissionStore();
     return permissionStore.buttons.includes(perm);
   }

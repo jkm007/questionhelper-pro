@@ -5,7 +5,7 @@ export function loginApi(data: { username: string; password: string }) {
 }
 
 export function getUserInfoApi() {
-  return request.get("/users/profile");
+  return request.get("/users/me");
 }
 
 export function logoutApi() {
