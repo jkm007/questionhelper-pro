@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A90D9"/>
+      <stop offset="100%" stop-color="#357ABD"/>
+    </linearGradient>
+    <clipPath id="circleClip">
+      <circle cx="256" cy="256" r="256"/>
+    </clipPath>
+  </defs>
+  <!-- Circular background -->
+  <circle cx="256" cy="256" r="256" fill="url(#bgGrad)"/>
+
+  <!-- Mascot face (clipped to circle) -->
+  <g clip-path="url(#circleClip)">
+    <!-- Body / Face -->
+    <circle cx="256" cy="280" r="120" fill="#FFE4C4"/>
+
+    <!-- Eyes -->
+    <ellipse cx="218" cy="258" rx="16" ry="20" fill="#2C3E50"/>
+    <ellipse cx="294" cy="258" rx="16" ry="20" fill="#2C3E50"/>
+    <circle cx="224" cy="252" r="6" fill="white"/>
+    <circle cx="300" cy="252" r="6" fill="white"/>
+
+    <!-- Eyebrows -->
+    <path d="M200 230 Q218 216 236 230" fill="none" stroke="#8B6914" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M276 230 Q294 216 312 230" fill="none" stroke="#8B6914" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- Nose -->
+    <ellipse cx="256" cy="280" rx="5" ry="7" fill="#E8A87C"/>
+
+    <!-- Smile -->
+    <path d="M232 302 Q256 325 280 302" fill="none" stroke="#C0392B" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Blush -->
+    <ellipse cx="200" cy="295" rx="16" ry="10" fill="#FFB6C1" opacity="0.5"/>
+    <ellipse cx="312" cy="295" rx="16" ry="10" fill="#FFB6C1" opacity="0.5"/>
+
+    <!-- Graduation cap -->
+    <polygon points="256,140 166,180 256,210 346,180" fill="#2C3E50"/>
+    <rect x="242" y="180" width="28" height="30" fill="#2C3E50"/>
+    <line x1="330" y1="180" x2="348" y2="220" stroke="#FFD700" stroke-width="3"/>
+    <circle cx="348" cy="224" r="5" fill="#FFD700"/>
+
+    <!-- Left hand -->
+    <ellipse cx="148" cy="330" rx="20" ry="16" fill="#FFE4C4"/>
+
+    <!-- Right hand + book -->
+    <ellipse cx="362" cy="340" rx="18" ry="14" fill="#FFE4C4"/>
+    <rect x="352" y="320" width="52" height="65" rx="3" fill="#E74C3C"/>
+    <line x1="378" y1="320" x2="378" y2="385" stroke="#C0392B" stroke-width="2"/>
+  </g>
+</svg>
