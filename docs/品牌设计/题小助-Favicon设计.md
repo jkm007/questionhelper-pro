@@ -72,20 +72,19 @@ Favicon 设计理念：
 ### 2.2 文件命名
 
 ```
-favicon 文件结构：
-
-assets/
-├── favicon/
-│   ├── favicon.ico              # 16x16 + 32x32 (多尺寸ICO)
-│   ├── favicon-16x16.png        # 16x16 PNG
-│   ├── favicon-32x32.png        # 32x32 PNG
-│   ├── favicon-48x48.png        # 48x48 PNG
-│   ├── favicon-64x64.png        # 64x64 PNG
-│   ├── favicon-128x128.png      # 128x128 PNG
-│   ├── apple-touch-icon.png     # 180x180 Apple
-│   ├── android-chrome-192x192.png # 192x192 Android
-│   ├── android-chrome-512x512.png # 512x512 Android
-│   └── mstile-150x150.png       # 150x150 Windows
+assets/favicon/
+├── favicon.svg              # 32x32 SVG 源文件
+├── favicon-16x16.svg        # 16x16 简化 SVG
+├── favicon.ico              # 多尺寸 ICO (16+32+48px)
+├── favicon-16x16.png        # 16x16 PNG
+├── favicon-32x32.png        # 32x32 PNG
+├── favicon-48x48.png        # 48x48 PNG
+├── favicon-64x64.png        # 64x64 PNG
+├── favicon-128x128.png      # 128x128 PNG
+├── favicon-180x180.png      # 180x180 Apple Touch Icon
+├── favicon-192x192.png      # 192x192 Android Chrome
+├── favicon-512x512.png      # 512x512 PWA Splash
+└── favicon-1024x1024.png    # 1024x1024 高清源
 ```
 
 ---
@@ -164,48 +163,44 @@ assets/
 
 ### 4.1 基础引用
 
+> **注意**：以下所有 favicon 文件需部署到 Web 项目的 `public/` 目录下，确保可通过根路径 `/` 直接访问。
+
 ```html
 <!-- 基础 Favicon -->
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 ```
+
+> **兼容性说明**：SVG favicon 在 Safari 和 IE 中不受支持，务必同时提供 ICO/PNG 作为后备。
 
 ### 4.2 完整引用 (推荐)
 
 ```html
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 
-<!-- Apple -->
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png">
-<link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.png">
-<link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png">
-<link rel="apple-touch-icon" sizes="114x114" href="/apple-touch-icon-114x114.png">
-<link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png">
-<link rel="apple-touch-icon" sizes="72x72" href="/apple-touch-icon-72x72.png">
-<link rel="apple-touch-icon" sizes="60x60" href="/apple-touch-icon-60x60.png">
-<link rel="apple-touch-icon" sizes="57x57" href="/apple-touch-icon-57x57.png">
+<!-- Apple Touch Icon -->
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png">
 
-<!-- Android -->
-<link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+<!-- Android Chrome -->
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png">
 
-<!-- Microsoft -->
-<meta name="msapplication-TileColor" content="#4A90D9">
-<meta name="msapplication-TileImage" content="/mstile-150x150.png">
+<!-- Theme Color -->
+<meta name="theme-color" content="#4A90D9">
 
-<!-- PWA -->
+<!-- PWA Manifest -->
 <link rel="manifest" href="/site.webmanifest">
-
-<!-- Safari Pinned Tab -->
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#4A90D9">
 ```
 
 ### 4.3 Web App Manifest
+
+> **注意**：此 `site.webmanifest` 文件需创建在项目根目录的 `public/` 目录下。
 
 ```json
 // site.webmanifest
@@ -215,12 +210,12 @@ assets/
   "description": "面向大众的社交学习平台",
   "icons": [
     {
-      "src": "/android-chrome-192x192.png",
+      "src": "/favicon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/android-chrome-512x512.png",
+      "src": "/favicon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
@@ -231,6 +226,24 @@ assets/
   "start_url": "/"
 }
 ```
+
+### 4.4 部署说明
+
+1. 将 `assets/favicon/` 目录下的所有文件复制到 Web 项目的 `public/` 目录
+2. **Vue CLI / Vite**：放到项目根目录的 `public/` 下
+3. **Next.js**：放到项目根目录的 `public/` 下
+4. 更新 favicon 后，为避免浏览器缓存，可在引用路径中添加版本参数，如 `?v=2`
+5. 部署后通过浏览器 DevTools 的 Network 面板确认所有 favicon 文件正确加载（状态码 200）
+
+### 4.5 浏览器兼容性
+
+| 格式 | Chrome | Firefox | Safari | Edge | IE |
+|------|--------|---------|--------|------|-----|
+| ICO  | ✅     | ✅      | ✅     | ✅   | ✅  |
+| PNG  | ✅     | ✅      | ✅     | ✅   | ❌  |
+| SVG  | ✅     | ✅      | ❌     | ✅   | ❌  |
+
+> **建议**：始终包含 ICO 格式作为最终后备方案，以确保最大兼容性。
 
 ---
 
@@ -354,8 +367,8 @@ Figma 操作步骤：
     │   题小助    │
     └─────────────┘
 
-iOS: apple-touch-icon.png
-Android: android-chrome-192x192.png
+iOS: favicon-180x180.png
+Android: favicon-192x192.png
 ```
 
 ### 7.3 社交媒体
@@ -380,16 +393,18 @@ Android: android-chrome-192x192.png
 
 | 文件名 | 尺寸 | 格式 | 用途 |
 |--------|------|------|------|
-| favicon.ico | 16x16, 32x32 | ICO | 浏览器标签 |
+| favicon.svg | 32x32 | SVG | SVG 源文件 |
+| favicon-16x16.svg | 16x16 | SVG | 简化 SVG |
+| favicon.ico | 16/32/48px | ICO | 浏览器标签（多尺寸） |
 | favicon-16x16.png | 16x16 | PNG | 浏览器标签 |
 | favicon-32x32.png | 32x32 | PNG | 浏览器标签 |
-| favicon-48x48.png | 48x48 | PNG | Windows |
-| favicon-64x64.png | 64x64 | PNG | Retina |
-| favicon-128x128.png | 128x128 | PNG | Chrome |
-| apple-touch-icon.png | 180x180 | PNG | iOS |
-| android-chrome-192x192.png | 192x192 | PNG | Android |
-| android-chrome-512x512.png | 512x512 | PNG | PWA |
-| mstile-150x150.png | 150x150 | PNG | Windows |
+| favicon-48x48.png | 48x48 | PNG | Windows 快捷方式 |
+| favicon-64x64.png | 64x64 | PNG | Retina 屏幕 |
+| favicon-128x128.png | 128x128 | PNG | Chrome Web Store |
+| favicon-180x180.png | 180x180 | PNG | Apple Touch Icon |
+| favicon-192x192.png | 192x192 | PNG | Android Chrome |
+| favicon-512x512.png | 512x512 | PNG | PWA Splash |
+| favicon-1024x1024.png | 1024x1024 | PNG | 高清源文件 |
 
 ### B. 色值参考
 
