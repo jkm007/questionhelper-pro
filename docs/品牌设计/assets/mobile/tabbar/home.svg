@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- 品牌化首页图标：房子 + 学士帽小装饰 -->
+  <path d="M3 10.5L12 3l9 7.5V20a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 20V10.5z" fill="#B0B0B0"/>
+  <path d="M9 21.5v-6h6v6" fill="#B0B0B0" opacity="0.6"/>
+  <!-- 品牌色小圆点 - 题小助标识 -->
+  <circle cx="12" cy="6.5" r="1.5" fill="#4A90D9" opacity="0.5"/>
+</svg>

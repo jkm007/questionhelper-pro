@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- 品牌化班级图标（激活态）：多人 + 学士帽 -->
+  <circle cx="12" cy="8" r="4" fill="#4A90D9"/>
+  <path d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6" fill="#4A90D9"/>
+  <circle cx="19" cy="10" r="2.5" fill="#4A90D9" opacity="0.5"/>
+  <!-- 金色学士帽 -->
+  <polygon points="12,2 8,5 12,6 16,5" fill="#FFD700"/>
+</svg>

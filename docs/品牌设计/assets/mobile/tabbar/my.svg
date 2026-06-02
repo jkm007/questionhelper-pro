@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- 品牌化我的图标：用户头像 -->
+  <circle cx="12" cy="8" r="4" fill="#B0B0B0"/>
+  <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" fill="#B0B0B0"/>
+  <!-- 品牌色小圆点 -->
+  <circle cx="18" cy="5" r="1.5" fill="#4A90D9" opacity="0.4"/>
+</svg>

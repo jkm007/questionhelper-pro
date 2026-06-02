@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- 品牌化班级图标：多人/群组 -->
+  <circle cx="12" cy="8" r="4" fill="#B0B0B0"/>
+  <path d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6" fill="#B0B0B0"/>
+  <circle cx="19" cy="10" r="2.5" fill="#B0B0B0" opacity="0.4"/>
+  <path d="M20 16c0-2 1.5-3.5 3.5-4" stroke="#B0B0B0" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>
+  <!-- 品牌色小圆点 -->
+  <circle cx="5" cy="6" r="1.5" fill="#4A90D9" opacity="0.4"/>
+</svg>

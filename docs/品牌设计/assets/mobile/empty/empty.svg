@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <circle cx="100" cy="100" r="80" fill="#F5F7FA"/>
+  <path d="M70 80h60M70 100h40M70 120h50" stroke="#C0C4CC" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="100" cy="160" r="20" fill="#E4E7ED"/>
+  <text x="100" y="165" text-anchor="middle" fill="#909399" font-size="12">空</text>
+</svg>
