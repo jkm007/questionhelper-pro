@@ -53,8 +53,8 @@ export const useUserStore = defineStore("user", () => {
 
   function hasPermission(perm: string): boolean {
     if (!userInfo.value) return false;
-    // 管理员角色拥有全部权限
-    if (userInfo.value.roles.includes("admin")) return true;
+    // 超级管理员拥有全部权限（需求文档 11.4）
+    if (userInfo.value.roles.includes("super_admin")) return true;
     // 检查用户权限列表（来自后端 UserInfo.permissions）
     if (userInfo.value.permissions.includes(perm)) return true;
     // 检查按钮权限列表（来自 GET /menus/buttons）

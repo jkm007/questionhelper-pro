@@ -46,11 +46,11 @@ func DataPermissionMiddleware(tableName string) gin.HandlerFunc {
 	}
 }
 
-// isAdmin 判断是否为管理员
+// isAdmin 判断是否为管理员（super_admin 或 admin 角色）
 func isAdmin(roleIDs []uint) bool {
 	var count int64
 	database.DB.Table("roles").
-		Where("id IN ? AND code = ?", roleIDs, "admin").
+		Where("id IN ? AND code IN ?", roleIDs, []string{"super_admin", "admin"}).
 		Count(&count)
 	return count > 0
 }
