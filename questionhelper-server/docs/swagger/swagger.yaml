@@ -227,6 +227,16 @@ definitions:
     required:
     - ids
     type: object
+  dto.BatchDeleteFilesRequest:
+    properties:
+      ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   dto.BatchDeleteRequest:
     properties:
       ids:
@@ -723,26 +733,6 @@ definitions:
         type: string
     required:
     - type
-    type: object
-  dto.CreateButtonPermissionRequest:
-    properties:
-      menu_id:
-        type: integer
-      permission_code:
-        maxLength: 100
-        type: string
-      permission_name:
-        maxLength: 100
-        type: string
-      remark:
-        maxLength: 500
-        type: string
-      sort:
-        type: integer
-    required:
-    - menu_id
-    - permission_code
-    - permission_name
     type: object
   dto.CreateCategoryRequest:
     properties:
@@ -1822,6 +1812,15 @@ definitions:
       deviceInfo:
         description: 设备信息（User-Agent）
         type: string
+      emailCode:
+        description: 邮箱验证码（邮箱登录时必填）
+        type: string
+      loginType:
+        description: 登录类型，默认 password
+        enum:
+        - password
+        - email_code
+        type: string
       password:
         type: string
       rememberMe:
@@ -1830,7 +1829,6 @@ definitions:
       username:
         type: string
     required:
-    - password
     - username
     type: object
   dto.MarkQuestionRequest:
@@ -3135,6 +3133,22 @@ definitions:
     - answer
     - question_id
     type: object
+  dto.SubmitReviewRequest:
+    properties:
+      content_id:
+        type: integer
+      content_type:
+        enum:
+        - question
+        - exam
+        - paper
+        type: string
+      remark:
+        type: string
+    required:
+    - content_id
+    - content_type
+    type: object
   dto.SwitchRoleRequest:
     properties:
       role_id:
@@ -3281,24 +3295,6 @@ definitions:
         - 0
         - 1
         type: integer
-    type: object
-  dto.UpdateButtonPermissionRequest:
-    properties:
-      menu_id:
-        type: integer
-      permission_code:
-        maxLength: 100
-        type: string
-      permission_name:
-        maxLength: 100
-        type: string
-      remark:
-        maxLength: 500
-        type: string
-      sort:
-        type: integer
-      status:
-        type: boolean
     type: object
   dto.UpdateCategoryRequest:
     properties:
@@ -4333,20 +4329,11 @@ paths:
       summary: 获取备份列表
       tags:
       - 备份管理
-  /admin/button-permissions:
+  /admin/backup/status:
     get:
       consumes:
       - application/json
-      description: 获取按钮权限列表，支持分页
-      parameters:
-      - description: 页码
-        in: query
-        name: page
-        type: integer
-      - description: 每页数量
-        in: query
-        name: page_size
-        type: integer
+      description: 获取备份任务各状态计数
       produces:
       - application/json
       responses:
@@ -4354,178 +4341,15 @@ paths:
           description: 成功
           schema:
             $ref: '#/definitions/response.Response'
-        "400":
-          description: 参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
         "500":
           description: 服务器内部错误
           schema:
             $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
-      summary: 获取按钮权限列表
+      summary: 获取备份监控状态
       tags:
-      - 按钮权限
-    post:
-      consumes:
-      - application/json
-      description: 创建一条新的按钮权限
-      parameters:
-      - description: 权限数据
-        in: body
-        name: req
-        required: true
-        schema:
-          $ref: '#/definitions/dto.CreateButtonPermissionRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 创建成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 创建按钮权限
-      tags:
-      - 按钮权限
-  /admin/button-permissions/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: 根据ID删除按钮权限
-      parameters:
-      - description: 权限ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 删除成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 无效的ID
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 删除按钮权限
-      tags:
-      - 按钮权限
-    get:
-      consumes:
-      - application/json
-      description: 根据ID获取按钮权限详情
-      parameters:
-      - description: 权限ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 无效的ID
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 获取按钮权限详情
-      tags:
-      - 按钮权限
-    put:
-      consumes:
-      - application/json
-      description: 根据ID更新按钮权限
-      parameters:
-      - description: 权限ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: 权限数据
-        in: body
-        name: req
-        required: true
-        schema:
-          $ref: '#/definitions/dto.UpdateButtonPermissionRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 更新成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 更新按钮权限
-      tags:
-      - 按钮权限
-  /admin/button-permissions/menu/{menu_id}:
-    get:
-      consumes:
-      - application/json
-      description: 根据菜单ID获取其下的所有按钮权限
-      parameters:
-      - description: 菜单ID
-        in: path
-        name: menu_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 无效的菜单ID
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 获取菜单下的按钮权限
-      tags:
-      - 按钮权限
+      - 数据备份
   /admin/cache/clear:
     post:
       consumes:
@@ -5222,7 +5046,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 导出评论数据
+      description: 导出评论数据为 Excel 文件
       parameters:
       - description: 页码
         in: query
@@ -5237,19 +5061,12 @@ paths:
         name: status
         type: string
       produces:
-      - application/json
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
       responses:
         "200":
-          description: 成功
+          description: Excel 文件
           schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/dto.CommentInfo'
-                  type: array
-              type: object
+            type: file
         "400":
           description: 参数错误
           schema:
@@ -5485,6 +5302,34 @@ paths:
       summary: 创建邮件模板
       tags:
       - 邮件配置
+  /admin/email/test:
+    post:
+      consumes:
+      - application/json
+      description: 发送测试邮件到指定邮箱（开发阶段仅记录日志）
+      parameters:
+      - description: 测试邮件参数
+        in: body
+        name: req
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 测试邮件发送
+      tags:
+      - 系统设置
   /admin/exams:
     get:
       consumes:
@@ -6194,6 +6039,42 @@ paths:
       summary: 更新功能开关
       tags:
       - 功能开关
+  /admin/file/batch-delete:
+    post:
+      consumes:
+      - application/json
+      description: 根据文件ID列表批量删除文件，被引用的文件无法删除
+      parameters:
+      - description: 文件ID列表
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchDeleteFilesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 文件不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 批量删除文件
+      tags:
+      - 文件管理(管理员)
   /admin/file/cleanup/logs:
     get:
       consumes:
@@ -6738,7 +6619,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取系统登录日志列表，支持分页
+      description: 获取系统登录日志列表，支持分页和筛选
       parameters:
       - description: 页码
         in: query
@@ -6748,6 +6629,26 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: 用户名
+        in: query
+        name: username
+        type: string
+      - description: 登录类型
+        in: query
+        name: login_type
+        type: string
+      - description: 状态:0=失败,1=成功
+        in: query
+        name: status
+        type: integer
+      - description: 开始时间
+        in: query
+        name: start_at
+        type: string
+      - description: 结束时间
+        in: query
+        name: end_at
+        type: string
       produces:
       - application/json
       responses:
@@ -6768,7 +6669,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取系统操作日志列表，支持分页
+      description: 获取系统操作日志列表，支持分页和筛选
       parameters:
       - description: 页码
         in: query
@@ -6778,6 +6679,26 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: 模块
+        in: query
+        name: module
+        type: string
+      - description: 操作
+        in: query
+        name: action
+        type: string
+      - description: 用户ID
+        in: query
+        name: user_id
+        type: integer
+      - description: 开始时间
+        in: query
+        name: start_at
+        type: string
+      - description: 结束时间
+        in: query
+        name: end_at
+        type: string
       produces:
       - application/json
       responses:
@@ -9842,6 +9763,34 @@ paths:
       summary: 创建短信模板
       tags:
       - 短信配置
+  /admin/sms/test:
+    post:
+      consumes:
+      - application/json
+      description: 发送测试短信到指定手机号（开发阶段仅记录日志）
+      parameters:
+      - description: 测试短信参数
+        in: body
+        name: req
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 测试短信发送
+      tags:
+      - 系统设置
   /admin/statistics/alerts/records:
     get:
       consumes:
@@ -9870,6 +9819,39 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取预警记录列表
+      tags:
+      - 统计管理
+  /admin/statistics/alerts/records/{id}/handle:
+    put:
+      consumes:
+      - application/json
+      description: 根据ID处理数据预警记录
+      parameters:
+      - description: 记录ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 处理数据
+        in: body
+        name: req
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 处理成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 处理数据预警记录
       tags:
       - 统计管理
   /admin/statistics/alerts/rules:
@@ -9933,6 +9915,65 @@ paths:
       summary: 创建预警规则
       tags:
       - 统计管理
+  /admin/statistics/alerts/rules/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 根据ID删除数据预警规则
+      parameters:
+      - description: 规则ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除数据预警规则
+      tags:
+      - 统计管理
+    put:
+      consumes:
+      - application/json
+      description: 根据ID更新数据预警规则
+      parameters:
+      - description: 规则ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 规则数据
+        in: body
+        name: req
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新数据预警规则
+      tags:
+      - 统计管理
   /admin/statistics/churn:
     get:
       consumes:
@@ -9976,6 +10017,27 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取用户流失统计
+      tags:
+      - 统计管理
+  /admin/statistics/churn/trend:
+    get:
+      consumes:
+      - application/json
+      description: 获取最近30条流失趋势数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取流失趋势数据
       tags:
       - 统计管理
   /admin/statistics/compare:
@@ -10027,6 +10089,44 @@ paths:
       security:
       - BearerAuth: []
       summary: 数据对比
+      tags:
+      - 统计管理
+  /admin/statistics/compare/metrics:
+    get:
+      consumes:
+      - application/json
+      description: 获取数据对比可选指标列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取可对比指标列表
+      tags:
+      - 统计管理
+  /admin/statistics/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: 获取DAU、MAU、今日新增、活跃率等管理端仪表盘指标
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取管理端仪表盘数据
       tags:
       - 统计管理
   /admin/statistics/events:
@@ -10333,6 +10433,27 @@ paths:
       summary: 获取用户留存统计
       tags:
       - 统计管理
+  /admin/statistics/retention/trend:
+    get:
+      consumes:
+      - application/json
+      description: 获取最近30条留存趋势数据
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取留存趋势数据
+      tags:
+      - 统计管理
   /admin/statistics/segments:
     get:
       consumes:
@@ -10489,6 +10610,60 @@ paths:
       security:
       - BearerAuth: []
       summary: 更新用户分群
+      tags:
+      - 统计管理
+  /admin/statistics/segments/{id}/members:
+    get:
+      consumes:
+      - application/json
+      description: 根据分群ID获取成员列表
+      parameters:
+      - description: 分群ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取分群成员列表
+      tags:
+      - 统计管理
+  /admin/statistics/segments/{id}/sync:
+    post:
+      consumes:
+      - application/json
+      description: 触发分群成员同步任务
+      parameters:
+      - description: 分群ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 同步分群成员
       tags:
       - 统计管理
   /admin/storage:
@@ -12660,6 +12835,38 @@ paths:
       summary: 回滚内容版本
       tags:
       - 内容管理
+  /content/reviews:
+    post:
+      consumes:
+      - application/json
+      description: 创作者将自己的私有内容提交为公共内容审核
+      parameters:
+      - description: 提交审核数据
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SubmitReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提交成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 提交内容审核
+      tags:
+      - 内容管理
   /content/tags/hot:
     get:
       consumes:
@@ -13867,6 +14074,37 @@ paths:
       summary: 更新收藏夹
       tags:
       - 收藏夹
+  /file/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据文件ID获取文件详细信息
+      parameters:
+      - description: 文件ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的文件ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: 文件不存在
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取文件信息
+      tags:
+      - 文件管理
   /file/{id}/access-logs:
     get:
       consumes:
@@ -14075,6 +14313,68 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取缩略图
+      tags:
+      - 文件管理
+  /file/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取文件列表，支持按类型、关键词过滤和排序
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - description: 文件类型(扩展名)
+        in: query
+        name: file_type
+        type: string
+      - description: 文件名关键词
+        in: query
+        name: keyword
+        type: string
+      - default: created_at
+        description: 排序字段
+        enum:
+        - created_at
+        - updated_at
+        - size
+        - name
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: 排序方式
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.PageResponse'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取文件列表
       tags:
       - 文件管理
   /file/upload/batch:
@@ -14882,6 +15182,68 @@ paths:
       security:
       - BearerAuth: []
       summary: 完成练习
+      tags:
+      - 练习管理
+  /practice/{id}/pause:
+    post:
+      consumes:
+      - application/json
+      description: 暂停进行中的练习会话
+      parameters:
+      - description: 练习ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 暂停成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的练习ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 暂停练习
+      tags:
+      - 练习管理
+  /practice/{id}/resume:
+    post:
+      consumes:
+      - application/json
+      description: 恢复已暂停的练习会话
+      parameters:
+      - description: 练习ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 恢复成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 无效的练习ID
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 恢复练习
       tags:
       - 练习管理
   /practice/challenge/levels:
@@ -17039,6 +17401,23 @@ paths:
       summary: 获取排行榜
       tags:
       - 数据统计
+  /statistics/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 触发统计数据刷新
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 手动刷新统计数据
+      tags:
+      - 数据统计
   /statistics/score/alert:
     get:
       consumes:
@@ -17097,6 +17476,44 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取成绩预测
+      tags:
+      - 数据统计
+  /statistics/share:
+    post:
+      consumes:
+      - application/json
+      description: 创建一条数据分享记录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建数据分享
+      tags:
+      - 数据统计
+  /statistics/share/{code}:
+    get:
+      consumes:
+      - application/json
+      description: 根据分享码获取分享数据
+      parameters:
+      - description: 分享码
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: 获取分享数据
       tags:
       - 数据统计
   /statistics/subscriptions:
@@ -17189,6 +17606,38 @@ paths:
       security:
       - BearerAuth: []
       summary: 取消数据订阅
+      tags:
+      - 数据统计
+    put:
+      consumes:
+      - application/json
+      description: 根据ID更新数据订阅配置
+      parameters:
+      - description: 订阅ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 订阅数据
+        in: body
+        name: req
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新数据订阅
       tags:
       - 数据统计
   /statistics/user:

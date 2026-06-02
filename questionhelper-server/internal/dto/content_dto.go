@@ -312,3 +312,10 @@ type RejectReviewRequest struct {
 type AddReviewCommentRequest struct {
 	Content string `json:"content" binding:"required,max=1000"`
 }
+
+// SubmitReviewRequest 提交审核请求
+type SubmitReviewRequest struct {
+	ContentType string `json:"content_type" binding:"required,oneof=question exam paper"`
+	ContentID   uint   `json:"content_id" binding:"required"`
+	Remark      string `json:"remark"`
+}

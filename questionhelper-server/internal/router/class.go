@@ -9,15 +9,31 @@ func SetupClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
 	// 与设计文档保持一致使用 /class（单数）
 	c := r.Group("/class")
 	{
-		// ==================== 基础班级 ====================
+		// ==================== 无冲突的顶级路由（必须在 /:id 之前注册） ====================
 		c.GET("", ctrl.ListClasses)
-		c.GET("/:id", ctrl.GetClass)
 		c.POST("", ctrl.CreateClass)
+		c.GET("/search", ctrl.SearchClasses)
+		c.GET("/tags", ctrl.ListTags)
+		c.POST("/tags", ctrl.CreateTag)
+		c.PUT("/tags/:tagId", ctrl.UpdateTag)
+		c.DELETE("/tags/:tagId", ctrl.DeleteTag)
+		c.GET("/templates", ctrl.ListTemplates)
+		c.POST("/templates", ctrl.CreateTemplate)
+		c.GET("/templates/:templateId", ctrl.GetTemplate)
+		c.PUT("/templates/:templateId", ctrl.UpdateTemplate)
+		c.DELETE("/templates/:templateId", ctrl.DeleteTemplate)
+		c.POST("/templates/:templateId/create", ctrl.CreateClassFromTemplate)
+
+		// ==================== 基础班级（/:id 路由） ====================
+		c.GET("/:id", ctrl.GetClass)
 		c.PUT("/:id", ctrl.UpdateClass)
 		c.DELETE("/:id", ctrl.DeleteClass)
 		c.POST("/:id/join", ctrl.JoinClass)
 		c.POST("/:id/leave", ctrl.LeaveClass)
 		c.GET("/:id/members", ctrl.ListMembers)
+		c.GET("/:id/members/:userId", ctrl.GetMemberDetail)
+		c.PUT("/:id/members/:userId", ctrl.SetMemberRole)
+		c.GET("/:id/members/export", ctrl.ExportMembers)
 		c.GET("/:id/notices", ctrl.ListNotices)
 
 		// ==================== 班级管理增强 ====================
@@ -25,7 +41,6 @@ func SetupClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
 		c.POST("/:id/unarchive", ctrl.UnarchiveClass)
 		c.POST("/:id/pin", ctrl.PinClass)
 		c.POST("/:id/unpin", ctrl.UnpinClass)
-		c.GET("/search", ctrl.SearchClasses)
 		c.GET("/:id/qrcode", ctrl.GenerateQRCode)
 		c.PUT("/:id/expire", ctrl.SetClassExpire)
 		c.GET("/:id/exams", ctrl.ListClassExams)
@@ -94,21 +109,9 @@ func SetupClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
 		c.GET("/:id/ranking", ctrl.ListRanking)
 		c.POST("/:id/ranking/calculate", ctrl.CalculateRanking)
 
-		// ==================== 标签管理 ====================
-		c.GET("/tags", ctrl.ListTags)
-		c.POST("/tags", ctrl.CreateTag)
-		c.PUT("/tags/:tagId", ctrl.UpdateTag)
-		c.DELETE("/tags/:tagId", ctrl.DeleteTag)
+		// ==================== 班级标签 ====================
 		c.POST("/:id/tags", ctrl.AddClassTag)
 		c.DELETE("/:id/tags/:tagId", ctrl.RemoveClassTag)
-
-		// ==================== 模板管理 ====================
-		c.GET("/templates", ctrl.ListTemplates)
-		c.POST("/templates", ctrl.CreateTemplate)
-		c.GET("/templates/:templateId", ctrl.GetTemplate)
-		c.PUT("/templates/:templateId", ctrl.UpdateTemplate)
-		c.DELETE("/templates/:templateId", ctrl.DeleteTemplate)
-		c.POST("/templates/:templateId/create", ctrl.CreateClassFromTemplate)
 
 		// ==================== 讨论管理 ====================
 		c.GET("/:id/discussions", ctrl.ListDiscussions)
@@ -117,6 +120,7 @@ func SetupClassRoutes(r *gin.RouterGroup, ctrl *class.ClassController) {
 		c.PUT("/:id/discussions/:discussionId", ctrl.UpdateDiscussion)
 		c.DELETE("/:id/discussions/:discussionId", ctrl.DeleteDiscussion)
 		c.POST("/:id/discussions/:discussionId/pin", ctrl.ToggleDiscussionPin)
+		c.POST("/:id/discussions/:discussionId/replies", ctrl.CreateDiscussionReply)
 
 		// ==================== 资源管理 ====================
 		c.GET("/:id/resources", ctrl.ListResources)

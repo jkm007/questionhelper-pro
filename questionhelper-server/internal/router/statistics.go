@@ -23,6 +23,7 @@ func SetupStatisticsRoutes(r *gin.RouterGroup, ctrl *statistics.StatisticsContro
 		// 数据订阅
 		s.GET("/subscriptions", ctrl.ListSubscriptions)
 		s.POST("/subscriptions", ctrl.CreateSubscription)
+		s.PUT("/subscriptions/:id", ctrl.UpdateSubscription)
 		s.DELETE("/subscriptions/:id", ctrl.DeleteSubscription)
 
 		// 题目分析
@@ -45,6 +46,13 @@ func SetupStatisticsRoutes(r *gin.RouterGroup, ctrl *statistics.StatisticsContro
 		s.GET("/mobile/practice", ctrl.GetMobilePracticeStats)
 		s.GET("/mobile/wrong", ctrl.GetMobileWrongStats)
 		s.GET("/mobile/trend", ctrl.GetMobileTrend)
+
+		// 数据分享
+		s.POST("/share", ctrl.ShareData)
+		s.GET("/share/:code", ctrl.GetSharedData)
+
+		// 手动刷新
+		s.POST("/refresh", ctrl.RefreshStats)
 	}
 }
 
@@ -52,8 +60,15 @@ func SetupStatisticsRoutes(r *gin.RouterGroup, ctrl *statistics.StatisticsContro
 func SetupAdminStatisticsRoutes(r *gin.RouterGroup, adminCtrl *statistics.StatisticsAdminController, userCtrl *statistics.StatisticsController) {
 	s := r.Group("/statistics")
 	{
+		// 管理端仪表盘
+		s.GET("/dashboard", adminCtrl.GetAdminDashboard)
+
 		// 用户留存分析
 		s.GET("/retention", adminCtrl.GetRetention)
+
+		// 留存/流失趋势
+		s.GET("/retention/trend", adminCtrl.GetRetentionTrend)
+		s.GET("/churn/trend", adminCtrl.GetChurnTrend)
 
 		// 用户流失分析
 		s.GET("/churn", adminCtrl.GetChurn)
@@ -69,6 +84,10 @@ func SetupAdminStatisticsRoutes(r *gin.RouterGroup, adminCtrl *statistics.Statis
 		s.PUT("/segments/:id", adminCtrl.UpdateSegment)
 		s.DELETE("/segments/:id", adminCtrl.DeleteSegment)
 
+		// 分群成员
+		s.GET("/segments/:id/members", adminCtrl.GetSegmentMembers)
+		s.POST("/segments/:id/sync", adminCtrl.SyncSegmentMembers)
+
 		// 用户路径分析
 		s.GET("/paths", adminCtrl.GetPathAnalysis)
 
@@ -80,12 +99,18 @@ func SetupAdminStatisticsRoutes(r *gin.RouterGroup, adminCtrl *statistics.Statis
 		// 数据预警
 		s.GET("/alerts/rules", adminCtrl.ListAlertRules)
 		s.POST("/alerts/rules", adminCtrl.CreateAlertRule)
+		s.PUT("/alerts/rules/:id", adminCtrl.UpdateAlertRule)
+		s.DELETE("/alerts/rules/:id", adminCtrl.DeleteAlertRule)
 		s.GET("/alerts/records", adminCtrl.ListAlertRecords)
+		s.PUT("/alerts/records/:id/handle", adminCtrl.HandleAlertRecord)
 
 		// 数据导出
 		s.POST("/export", adminCtrl.ExportData)
 
 		// 数据对比
 		s.GET("/compare", adminCtrl.CompareData)
+
+		// 对比指标列表
+		s.GET("/compare/metrics", adminCtrl.GetCompareMetrics)
 	}
 }

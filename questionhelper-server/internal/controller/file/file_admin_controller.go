@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -14,6 +15,48 @@ type FileAdminController struct{}
 
 func NewFileAdminController() *FileAdminController {
 	return &FileAdminController{}
+}
+
+// ==================== Batch Operations ====================
+
+// BatchDeleteFiles 批量删除文件
+// @Summary      批量删除文件
+// @Description  根据文件ID列表批量删除文件，被引用的文件无法删除
+// @Tags         文件管理(管理员)
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.BatchDeleteFilesRequest  true  "文件ID列表"
+// @Success      200  {object}  response.Response  "删除成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      404  {object}  response.Response  "文件不存在"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/file/batch-delete [post]
+// @Security     BearerAuth
+func (ctrl *FileAdminController) BatchDeleteFiles(c *gin.Context) {
+	var req dto.BatchDeleteFilesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误")
+		return
+	}
+
+	// 检查引用计数
+	for _, id := range req.IDs {
+		f, err := fileService.GetFile(id)
+		if err != nil {
+			response.Error(c, http.StatusNotFound, fmt.Sprintf("文件 %d 不存在", id))
+			return
+		}
+		if f.ReferenceCount > 0 {
+			response.Error(c, http.StatusBadRequest, fmt.Sprintf("文件 %d 正在被引用，无法删除", id))
+			return
+		}
+	}
+
+	if err := fileService.BatchDeleteFiles(req.IDs); err != nil {
+		response.Error(c, http.StatusInternalServerError, "删除失败")
+		return
+	}
+	response.Success(c, nil)
 }
 
 // ==================== Hotlink Protection ====================

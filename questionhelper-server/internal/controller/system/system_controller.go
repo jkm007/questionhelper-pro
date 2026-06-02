@@ -1,12 +1,15 @@
 package system
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"questionhelper-server/internal/dto"
+	"questionhelper-server/internal/model"
 	"questionhelper-server/internal/service/system"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/response"
 )
 
@@ -645,4 +648,74 @@ func (ctrl *SystemController) ListAlertRecords(c *gin.Context) {
 		return
 	}
 	response.Page(c, records, total, query.Page, query.PageSize)
+}
+
+// ==================== 测试发送 ====================
+
+// TestEmail 测试邮件发送
+// @Summary      测试邮件发送
+// @Description  发送测试邮件到指定邮箱（开发阶段仅记录日志）
+// @Tags         系统设置
+// @Accept       json
+// @Produce      json
+// @Param        req  body      object  true  "测试邮件参数"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Router       /admin/email/test [post]
+// @Security     BearerAuth
+func (ctrl *SystemController) TestEmail(c *gin.Context) {
+	var req struct {
+		To string `json:"to" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+	log.Printf("[TEST] 发送测试邮件到: %s", req.To)
+	response.Success(c, gin.H{"message": "测试邮件已发送（开发阶段仅记录日志）"})
+}
+
+// TestSMS 测试短信发送
+// @Summary      测试短信发送
+// @Description  发送测试短信到指定手机号（开发阶段仅记录日志）
+// @Tags         系统设置
+// @Accept       json
+// @Produce      json
+// @Param        req  body      object  true  "测试短信参数"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Router       /admin/sms/test [post]
+// @Security     BearerAuth
+func (ctrl *SystemController) TestSMS(c *gin.Context) {
+	var req struct {
+		Phone string `json:"phone" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+	log.Printf("[TEST] 发送测试短信到: %s", req.Phone)
+	response.Success(c, gin.H{"message": "测试短信已发送（开发阶段仅记录日志）"})
+}
+
+// GetBackupStatus 备份监控状态
+// @Summary      获取备份监控状态
+// @Description  获取备份任务各状态计数
+// @Tags         数据备份
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/backup/status [get]
+// @Security     BearerAuth
+func (ctrl *SystemController) GetBackupStatus(c *gin.Context) {
+	var pending, running, completed, failed int64
+	database.DB.Model(&model.BackupRecord{}).Where("status = 'pending'").Count(&pending)
+	database.DB.Model(&model.BackupRecord{}).Where("status = 'running'").Count(&running)
+	database.DB.Model(&model.BackupRecord{}).Where("status = 'completed'").Count(&completed)
+	database.DB.Model(&model.BackupRecord{}).Where("status = 'failed'").Count(&failed)
+	response.Success(c, gin.H{
+		"pending": pending, "running": running,
+		"completed": completed, "failed": failed,
+	})
 }

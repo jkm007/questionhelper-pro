@@ -3,10 +3,13 @@ package practice
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"questionhelper-server/internal/dto"
+	"questionhelper-server/internal/model"
 	"questionhelper-server/internal/service/practice"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/response"
 )
 
@@ -509,4 +512,72 @@ func (ctrl *PracticeController) GetChallengeProgress(c *gin.Context) {
 		return
 	}
 	response.Success(c, progress)
+}
+
+// ==================== 练习记录导出/搜索 ====================
+
+// ExportPracticeRecords 导出练习记录
+func (ctrl *PracticeController) ExportPracticeRecords(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	var sessions []model.PracticeSession
+	database.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&sessions)
+	response.Success(c, sessions)
+}
+
+// SearchPracticeRecords 搜索练习记录
+func (ctrl *PracticeController) SearchPracticeRecords(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	keyword := c.Query("keyword")
+	query := database.DB.Where("user_id = ?", userID)
+	if keyword != "" {
+		query = query.Joins("LEFT JOIN questions q ON q.id = practice_sessions.category_id").
+			Where("q.title LIKE ?", "%"+keyword+"%")
+	}
+	var sessions []model.PracticeSession
+	query.Order("created_at DESC").Find(&sessions)
+	response.Success(c, sessions)
+}
+
+// ==================== 打卡状态/连续打卡 ====================
+
+// GetCheckinStatus 获取打卡状态
+func (ctrl *PracticeController) GetCheckinStatus(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	var checkin model.PracticeCheckin
+	today := time.Now().Format("2006-01-02")
+	database.DB.Where("user_id = ? AND date = ?", userID, today).First(&checkin)
+	response.Success(c, gin.H{
+		"is_checkin": checkin.ID > 0,
+		"streak":     checkin.Streak,
+		"count":      checkin.QuestionCount,
+	})
+}
+
+// GetCheckinStreak 获取连续打卡天数
+func (ctrl *PracticeController) GetCheckinStreak(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	var checkin model.PracticeCheckin
+	database.DB.Where("user_id = ?", userID).Order("date DESC").First(&checkin)
+	response.Success(c, gin.H{"streak": checkin.Streak})
+}
+
+// ==================== 排行榜"我的排名" ====================
+
+// GetMyRank 获取我的排名
+func (ctrl *PracticeController) GetMyRank(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	rankType := c.DefaultQuery("rank_type", "1")
+
+	var entry model.PracticeLeaderboard
+	today := time.Now().Format("2006-01-02")
+	database.DB.Where("user_id = ? AND rank_type = ? AND rank_date = ?", userID, rankType, today).First(&entry)
+
+	var totalRank int64
+	database.DB.Model(&model.PracticeLeaderboard{}).Where("rank_type = ? AND rank_date = ?", rankType, today).Count(&totalRank)
+
+	response.Success(c, gin.H{
+		"rank_pos":   entry.RankPos,
+		"score":      entry.Score,
+		"total_rank": totalRank,
+	})
 }

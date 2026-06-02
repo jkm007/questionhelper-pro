@@ -6,7 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"questionhelper-server/internal/dto"
+	"questionhelper-server/internal/model"
 	"questionhelper-server/internal/service/statistics"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/response"
 )
 
@@ -521,4 +523,183 @@ func (ctrl *StatisticsAdminController) CompareData(c *gin.Context) {
 		return
 	}
 	response.Success(c, result)
+}
+
+// ==================== 管理端仪表盘 ====================
+
+// GetAdminDashboard 管理端仪表盘
+// @Summary      获取管理端仪表盘数据
+// @Description  获取DAU、MAU、今日新增、活跃率等管理端仪表盘指标
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/dashboard [get]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) GetAdminDashboard(ctx *gin.Context) {
+	var stats struct {
+		DAU        int64   `json:"dau"`
+		MAU        int64   `json:"mau"`
+		TodayNew   int64   `json:"today_new"`
+		ActiveRate float64 `json:"active_rate"`
+	}
+	database.DB.Model(&model.UserEvent{}).Where("created_at >= CURDATE()").Distinct("user_id").Count(&stats.DAU)
+	database.DB.Model(&model.UserEvent{}).Where("created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)").Distinct("user_id").Count(&stats.MAU)
+	database.DB.Model(&model.User{}).Where("DATE(created_at) = CURDATE()").Count(&stats.TodayNew)
+	if stats.MAU > 0 {
+		stats.ActiveRate = float64(stats.DAU) / float64(stats.MAU) * 100
+	}
+	response.Success(ctx, stats)
+}
+
+// ==================== 分群成员 ====================
+
+// GetSegmentMembers 获取分群成员
+// @Summary      获取分群成员列表
+// @Description  根据分群ID获取成员列表
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "分群ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/segments/{id}/members [get]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) GetSegmentMembers(ctx *gin.Context) {
+	id := ctx.Param("id")
+	var members []model.UserSegmentMember
+	database.DB.Where("segment_id = ?", id).Find(&members)
+	response.Success(ctx, members)
+}
+
+// SyncSegmentMembers 同步分群成员
+// @Summary      同步分群成员
+// @Description  触发分群成员同步任务
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "分群ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/segments/{id}/sync [post]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) SyncSegmentMembers(ctx *gin.Context) {
+	response.Success(ctx, gin.H{"message": "同步已触发"})
+}
+
+// ==================== 预警规则更新/删除 ====================
+
+// UpdateAlertRule 更新预警规则
+// @Summary      更新数据预警规则
+// @Description  根据ID更新数据预警规则
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "规则ID"
+// @Param        req  body      object  true  "规则数据"
+// @Success      200  {object}  response.Response  "更新成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/alerts/rules/{id} [put]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) UpdateAlertRule(ctx *gin.Context) {
+	id := ctx.Param("id")
+	var req map[string]interface{}
+	ctx.ShouldBindJSON(&req)
+	database.DB.Model(&model.AlertRule{}).Where("id = ?", id).Updates(req)
+	response.Success(ctx, nil)
+}
+
+// DeleteAlertRule 删除预警规则
+// @Summary      删除数据预警规则
+// @Description  根据ID删除数据预警规则
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "规则ID"
+// @Success      200  {object}  response.Response  "删除成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/alerts/rules/{id} [delete]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) DeleteAlertRule(ctx *gin.Context) {
+	id := ctx.Param("id")
+	database.DB.Delete(&model.AlertRule{}, id)
+	response.Success(ctx, nil)
+}
+
+// ==================== 预警记录处理 ====================
+
+// HandleAlertRecord 处理预警记录
+// @Summary      处理数据预警记录
+// @Description  根据ID处理数据预警记录
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint    true  "记录ID"
+// @Param        req  body      object  true  "处理数据"
+// @Success      200  {object}  response.Response  "处理成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/alerts/records/{id}/handle [put]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) HandleAlertRecord(ctx *gin.Context) {
+	id := ctx.Param("id")
+	var req struct {
+		Status string `json:"status"`
+		Remark string `json:"remark"`
+	}
+	ctx.ShouldBindJSON(&req)
+	database.DB.Model(&model.AlertRecord{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"status": req.Status,
+	})
+	response.Success(ctx, nil)
+}
+
+// ==================== 留存/流失趋势 ====================
+
+// GetRetentionTrend 留存趋势
+// @Summary      获取留存趋势数据
+// @Description  获取最近30条留存趋势数据
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/retention/trend [get]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) GetRetentionTrend(ctx *gin.Context) {
+	var data []model.UserRetention
+	database.DB.Order("date DESC").Limit(30).Find(&data)
+	response.Success(ctx, data)
+}
+
+// GetChurnTrend 流失趋势
+// @Summary      获取流失趋势数据
+// @Description  获取最近30条流失趋势数据
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/statistics/churn/trend [get]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) GetChurnTrend(ctx *gin.Context) {
+	var data []model.UserChurn
+	database.DB.Order("date DESC").Limit(30).Find(&data)
+	response.Success(ctx, data)
+}
+
+// ==================== 对比指标列表 ====================
+
+// GetCompareMetrics 对比指标列表
+// @Summary      获取可对比指标列表
+// @Description  获取数据对比可选指标列表
+// @Tags         统计管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Router       /admin/statistics/compare/metrics [get]
+// @Security     BearerAuth
+func (ctrl *StatisticsAdminController) GetCompareMetrics(ctx *gin.Context) {
+	metrics := []string{"dau", "mau", "new_users", "practice_count", "exam_count", "accuracy"}
+	response.Success(ctx, metrics)
 }

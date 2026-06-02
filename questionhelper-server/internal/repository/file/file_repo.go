@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"time"
 
 	"questionhelper-server/internal/model"
@@ -328,6 +329,51 @@ func GetTopUploaders(limit int) ([]struct {
 		Limit(limit).
 		Scan(&results).Error
 	return results, err
+}
+
+// ListFilesWithFilter 带过滤条件的文件列表
+func ListFilesWithFilter(page, pageSize int, fileType, keyword, sortBy, sortOrder string) ([]model.File, int64, error) {
+	var files []model.File
+	var total int64
+
+	db := database.DB.Model(&model.File{}).Where("status = ?", "active")
+
+	if fileType != "" {
+		db = db.Where("extension = ?", fileType)
+	}
+	if keyword != "" {
+		db = db.Where("name LIKE ?", "%"+keyword+"%")
+	}
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if offset < 0 {
+		offset = 0
+	}
+
+	// 白名单校验排序字段，防止 SQL 注入
+	allowedSortFields := map[string]bool{
+		"created_at": true,
+		"updated_at": true,
+		"size":       true,
+		"name":       true,
+	}
+	if !allowedSortFields[sortBy] {
+		sortBy = "created_at"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	if err := db.Offset(offset).Limit(pageSize).
+		Order(fmt.Sprintf("%s %s", sortBy, sortOrder)).Find(&files).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return files, total, nil
 }
 
 // BatchDeleteFiles 批量删除文件记录

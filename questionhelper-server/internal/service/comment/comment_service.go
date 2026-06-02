@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 
 	"questionhelper-server/internal/dto"
@@ -84,12 +87,120 @@ func CreateComment(userID uint, req *dto.CreateCommentRequest) error {
 		Status:        1,
 	}
 
+	// 审核规则匹配
+	if err := applyAuditRules(comment); err != nil {
+		logger.Warnf("审核规则匹配出错: %v", err)
+	}
+
 	if err := commentRepo.Create(comment); err != nil {
 		return fmt.Errorf("创建评论失败: %w", err)
 	}
 
+	// 评论回复通知
+	if req.ParentID != nil && *req.ParentID > 0 {
+		parentComment, err := commentRepo.FindByID(*req.ParentID)
+		if err == nil && parentComment.UserID != userID {
+			truncated := truncateContent(comment.Content, 50)
+			notification := &model.Notification{
+				UserID:     parentComment.UserID,
+				Type:       1, // comment_reply
+				Title:      "评论回复",
+				Content:    fmt.Sprintf("有人回复了您的评论：%s", truncated),
+				TargetType: fmt.Sprintf("%d", req.TargetType),
+				TargetID:   req.TargetID,
+			}
+			database.DB.Create(notification)
+		}
+	}
+
 	logger.Infof("用户 %d 创建评论成功", userID)
 	return nil
+}
+
+// applyAuditRules 对评论应用审核规则
+func applyAuditRules(comment *model.Comment) error {
+	rules, err := commentRepo.FindEnabledAuditRules()
+	if err != nil {
+		return err
+	}
+
+	for _, rule := range rules {
+		if matchAuditRule(comment.Content, rule) {
+			switch rule.Action {
+			case 1: // 标记待审
+				comment.Status = 0
+			case 2: // 自动隐藏
+				comment.Status = 0
+			case 3: // 自动删除（标记为隐藏）
+				comment.Status = 0
+			case 4: // 拒绝发布
+				comment.Status = 0
+			}
+			break
+		}
+	}
+	return nil
+}
+
+// matchAuditRule 匹配审核规则
+func matchAuditRule(content string, rule model.CommentAuditRule) bool {
+	switch rule.RuleType {
+	case "keyword":
+		// 关键词匹配：检查内容是否包含规则中的关键词
+		keywords := strings.Split(rule.Pattern, ",")
+		for _, kw := range keywords {
+			kw = strings.TrimSpace(kw)
+			if kw != "" && strings.Contains(content, kw) {
+				return true
+			}
+		}
+	case "regex":
+		// 正则匹配
+		matched, _ := regexp.MatchString(rule.Pattern, content)
+		return matched
+	case "length":
+		// 长度匹配：规则pattern为最大长度值
+		maxLen, err := strconv.Atoi(strings.TrimSpace(rule.Pattern))
+		if err == nil && len(content) > maxLen {
+			return true
+		}
+	case "repeat":
+		// 重复字符检测：规则pattern为重复次数阈值
+		threshold, err := strconv.Atoi(strings.TrimSpace(rule.Pattern))
+		if err == nil && hasRepeatedChars(content, threshold) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasRepeatedChars 检测内容中是否有连续重复的字符
+func hasRepeatedChars(content string, threshold int) bool {
+	if threshold <= 0 || len(content) == 0 {
+		return false
+	}
+	runes := []rune(content)
+	count := 1
+	for i := 1; i < len(runes); i++ {
+		if runes[i] == runes[i-1] {
+			count++
+			if count >= threshold {
+				return true
+			}
+		} else {
+			count = 1
+		}
+	}
+	return false
+}
+
+// truncateContent 截断内容到指定长度
+func truncateContent(content string, maxLen int) string {
+	runes := []rune(content)
+	if len(runes) <= maxLen {
+		return content
+	}
+	return string(runes[:maxLen]) + "..."
 }
 
 // EditComment 编辑评论
@@ -628,18 +739,41 @@ func GetCommentStats() (*dto.CommentStats, error) {
 	}, nil
 }
 
-// ExportComments 导出评论
-func ExportComments(req *dto.CommentExportRequest) ([]dto.CommentInfo, error) {
+// ExportComments 导出评论为 Excel
+func ExportComments(req *dto.CommentExportRequest) (*excelize.File, error) {
 	comments, err := commentRepo.ListForExport(req)
 	if err != nil {
 		return nil, fmt.Errorf("导出评论失败: %w", err)
 	}
 
-	list := make([]dto.CommentInfo, 0, len(comments))
-	for _, c := range comments {
-		list = append(list, toCommentInfo(&c))
+	f := excelize.NewFile()
+	sheet := "评论数据"
+	f.NewSheet(sheet)
+
+	// 表头
+	headers := []string{"ID", "内容", "用户ID", "目标类型", "目标ID", "状态", "点赞数", "创建时间"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, h)
 	}
-	return list, nil
+
+	// 数据行
+	for i, c := range comments {
+		row := i + 2
+		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), c.ID)
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), c.Content)
+		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), c.UserID)
+		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), c.TargetType)
+		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), c.TargetID)
+		f.SetCellValue(sheet, fmt.Sprintf("F%d", row), c.Status)
+		f.SetCellValue(sheet, fmt.Sprintf("G%d", row), c.LikeCount)
+		f.SetCellValue(sheet, fmt.Sprintf("H%d", row), c.CreatedAt.Format("2006-01-02 15:04:05"))
+	}
+
+	// 删除默认的 Sheet1
+	f.DeleteSheet("Sheet1")
+
+	return f, nil
 }
 
 // ==================== Helper Functions ====================

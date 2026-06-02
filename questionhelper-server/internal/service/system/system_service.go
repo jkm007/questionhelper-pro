@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 	"time"
 
 	"gorm.io/gorm"
 
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
+	"questionhelper-server/pkg/config"
 	"questionhelper-server/pkg/database"
+	"questionhelper-server/pkg/logger"
 )
 
 // ==================== 系统设置(原有) ====================
@@ -44,11 +48,26 @@ func UpdateSettings(settings map[string]string) error {
 }
 
 // ListOperationLogs 操作日志列表
-func ListOperationLogs(page, pageSize int) ([]model.OperationLog, int64, error) {
+func ListOperationLogs(page, pageSize int, module, action string, userID uint, startAt, endAt string) ([]model.OperationLog, int64, error) {
 	var logs []model.OperationLog
 	var total int64
 
 	db := database.DB.Model(&model.OperationLog{})
+	if module != "" {
+		db = db.Where("module = ?", module)
+	}
+	if action != "" {
+		db = db.Where("action = ?", action)
+	}
+	if userID > 0 {
+		db = db.Where("user_id = ?", userID)
+	}
+	if startAt != "" {
+		db = db.Where("created_at >= ?", startAt)
+	}
+	if endAt != "" {
+		db = db.Where("created_at <= ?", endAt)
+	}
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -68,11 +87,26 @@ func ListOperationLogs(page, pageSize int) ([]model.OperationLog, int64, error) 
 }
 
 // ListLoginLogs 登录日志列表
-func ListLoginLogs(page, pageSize int) ([]model.LoginLog, int64, error) {
+func ListLoginLogs(page, pageSize int, username, loginType string, status *int8, startAt, endAt string) ([]model.LoginLog, int64, error) {
 	var logs []model.LoginLog
 	var total int64
 
 	db := database.DB.Model(&model.LoginLog{})
+	if username != "" {
+		db = db.Where("username = ?", username)
+	}
+	if loginType != "" {
+		db = db.Where("login_type = ?", loginType)
+	}
+	if status != nil {
+		db = db.Where("status = ?", *status)
+	}
+	if startAt != "" {
+		db = db.Where("created_at >= ?", startAt)
+	}
+	if endAt != "" {
+		db = db.Where("created_at <= ?", endAt)
+	}
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -472,9 +506,9 @@ func CreateBackup(req *dto.CreateBackupRequest) (*model.BackupRecord, error) {
 	}
 	if req.ConfigID > 0 {
 		record.ConfigID = req.ConfigID
-		var config model.BackupConfig
-		if err := database.DB.First(&config, req.ConfigID).Error; err == nil {
-			record.FilePath = fmt.Sprintf("%s/backup_%s_%d.sql", config.StoragePath, time.Now().Format("20060102_150405"), time.Now().Unix())
+		var cfg model.BackupConfig
+		if err := database.DB.First(&cfg, req.ConfigID).Error; err == nil {
+			record.FilePath = fmt.Sprintf("%s/backup_%s_%d.sql", cfg.StoragePath, time.Now().Format("20060102_150405"), time.Now().Unix())
 		}
 	} else {
 		record.FilePath = fmt.Sprintf("backups/backup_%s_%d.sql", time.Now().Format("20060102_150405"), time.Now().Unix())
@@ -483,7 +517,99 @@ func CreateBackup(req *dto.CreateBackupRequest) (*model.BackupRecord, error) {
 	if err := database.DB.Create(record).Error; err != nil {
 		return nil, fmt.Errorf("创建备份记录失败: %w", err)
 	}
+
+	// 启动 goroutine 异步执行备份
+	go executeBackup(record)
+
 	return record, nil
+}
+
+// executeBackup 异步执行备份
+func executeBackup(record *model.BackupRecord) {
+	// 更新状态为 running
+	now := time.Now()
+	database.DB.Model(record).Updates(map[string]interface{}{
+		"status":     "running",
+		"started_at": &now,
+	})
+
+	// 获取数据库配置
+	cfg := config.Cfg.MySQL
+
+	// 确保目录存在
+	dir := "backups"
+	if record.FilePath != "" {
+		// 从文件路径中提取目录
+		for i := len(record.FilePath) - 1; i >= 0; i-- {
+			if record.FilePath[i] == '/' {
+				dir = record.FilePath[:i]
+				break
+			}
+		}
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		errMsg := fmt.Sprintf("创建备份目录失败: %v", err)
+		logger.Errorf("备份失败: %s", errMsg)
+		database.DB.Model(record).Updates(map[string]interface{}{
+			"status":        "failed",
+			"error_message": errMsg,
+		})
+		return
+	}
+
+	// 执行 mysqldump
+	cmd := exec.Command("mysqldump",
+		"-h", cfg.Host,
+		"-P", fmt.Sprintf("%d", cfg.Port),
+		"-u", cfg.User,
+		fmt.Sprintf("-p%s", cfg.Password),
+		cfg.DBName,
+	)
+
+	outFile, err := os.Create(record.FilePath)
+	if err != nil {
+		errMsg := fmt.Sprintf("创建备份文件失败: %v", err)
+		logger.Errorf("备份失败: %s", errMsg)
+		database.DB.Model(record).Updates(map[string]interface{}{
+			"status":        "failed",
+			"error_message": errMsg,
+		})
+		return
+	}
+	defer outFile.Close()
+
+	cmd.Stdout = outFile
+
+	if err := cmd.Run(); err != nil {
+		errMsg := fmt.Sprintf("执行 mysqldump 失败: %v", err)
+		logger.Errorf("备份失败: %s", errMsg)
+		database.DB.Model(record).Updates(map[string]interface{}{
+			"status":        "failed",
+			"error_message": errMsg,
+		})
+		return
+	}
+
+	// 获取文件大小
+	info, err := outFile.Stat()
+	if err != nil {
+		errMsg := fmt.Sprintf("获取备份文件信息失败: %v", err)
+		logger.Errorf("备份失败: %s", errMsg)
+		database.DB.Model(record).Updates(map[string]interface{}{
+			"status":        "failed",
+			"error_message": errMsg,
+		})
+		return
+	}
+
+	completedAt := time.Now()
+	database.DB.Model(record).Updates(map[string]interface{}{
+		"status":       "completed",
+		"file_size":    info.Size(),
+		"completed_at": &completedAt,
+	})
+
+	logger.Infof("备份完成: %s, 大小: %d bytes", record.FilePath, info.Size())
 }
 
 // ListBackupRecords 备份列表
@@ -522,8 +648,58 @@ func RestoreBackup(id uint) error {
 	if record.Status != "completed" {
 		return fmt.Errorf("只能恢复已完成的备份")
 	}
-	// 实际恢复逻辑由后台任务执行，这里仅更新状态
-	return database.DB.Model(&record).Update("status", "restoring").Error
+
+	// 启动 goroutine 异步执行恢复
+	go executeRestore(&record)
+
+	return nil
+}
+
+// executeRestore 异步执行备份恢复
+func executeRestore(record *model.BackupRecord) {
+	database.DB.Model(record).Update("status", "restoring")
+
+	// 检查备份文件是否存在
+	if _, err := os.Stat(record.FilePath); os.IsNotExist(err) {
+		errMsg := fmt.Sprintf("备份文件不存在: %s", record.FilePath)
+		logger.Errorf("恢复失败: %s", errMsg)
+		database.DB.Model(record).Updates(map[string]interface{}{
+			"status":        "failed",
+			"error_message": errMsg,
+		})
+		return
+	}
+
+	// 获取数据库配置
+	cfg := config.Cfg.MySQL
+
+	// 执行 mysql 命令导入
+	cmd := exec.Command("mysql",
+		"-h", cfg.Host,
+		"-P", fmt.Sprintf("%d", cfg.Port),
+		"-u", cfg.User,
+		fmt.Sprintf("-p%s", cfg.Password),
+		cfg.DBName,
+		"-e", fmt.Sprintf("source %s", record.FilePath),
+	)
+
+	if err := cmd.Run(); err != nil {
+		errMsg := fmt.Sprintf("执行 mysql 导入失败: %v", err)
+		logger.Errorf("恢复失败: %s", errMsg)
+		database.DB.Model(record).Updates(map[string]interface{}{
+			"status":        "failed",
+			"error_message": errMsg,
+		})
+		return
+	}
+
+	completedAt := time.Now()
+	database.DB.Model(record).Updates(map[string]interface{}{
+		"status":       "completed",
+		"completed_at": &completedAt,
+	})
+
+	logger.Infof("备份恢复完成: %s", record.FilePath)
 }
 
 // DeleteBackup 删除备份

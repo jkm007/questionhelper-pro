@@ -46,6 +46,9 @@ func (s *Scheduler) Start() {
 	// 账号注销处理 — 每天凌晨 1 点
 	s.cron.AddJob("0 1 * * *", &AccountDeactivateTask{})
 
+	// 练习超时自动结束 — 每小时检查一次
+	s.cron.AddJob("0 * * * *", &PracticeTimeoutTask{})
+
 	s.cron.Start()
 	logger.Info("定时任务调度器已启动")
 }

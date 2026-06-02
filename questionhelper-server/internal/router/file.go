@@ -21,6 +21,10 @@ func SetupFileRoutes(r *gin.RouterGroup, ctrl *file.FileController) {
 		upload.POST("/batch", ctrl.BatchUpload)
 	}
 
+	// 文件查询
+	r.GET("/file/list", ctrl.ListFiles)
+	r.GET("/file/:id", ctrl.GetFile)
+
 	// 文件下载
 	r.GET("/file/:id/download", ctrl.DownloadFile)
 
@@ -41,6 +45,9 @@ func SetupFileRoutes(r *gin.RouterGroup, ctrl *file.FileController) {
 
 // SetupAdminFileRoutes 管理员文件路由
 func SetupAdminFileRoutes(r *gin.RouterGroup, ctrl *file.FileAdminController) {
+	// 批量操作
+	r.POST("/file/batch-delete", ctrl.BatchDeleteFiles)
+
 	// 防盗链管理
 	hotlink := r.Group("/file/hotlink-rules")
 	{

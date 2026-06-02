@@ -45,6 +45,7 @@ func SetupAdminSystemRoutes(r *gin.RouterGroup, ctrl *system.SystemController) {
 		backup.DELETE("/:id", ctrl.DeleteBackup)
 		backup.GET("/config", ctrl.GetBackupConfigs)
 		backup.PUT("/config", ctrl.UpdateBackupConfig)
+		backup.GET("/status", ctrl.GetBackupStatus)
 	}
 
 	// 功能开关
@@ -76,6 +77,7 @@ func SetupAdminSystemRoutes(r *gin.RouterGroup, ctrl *system.SystemController) {
 		email.PUT("/config", ctrl.UpdateEmailConfig)
 		email.GET("/templates", ctrl.ListEmailTemplates)
 		email.POST("/templates", ctrl.CreateEmailTemplate)
+		email.POST("/test", ctrl.TestEmail)
 	}
 
 	// 短信配置
@@ -85,6 +87,7 @@ func SetupAdminSystemRoutes(r *gin.RouterGroup, ctrl *system.SystemController) {
 		sms.PUT("/config", ctrl.UpdateSMSConfig)
 		sms.GET("/templates", ctrl.ListSMSTemplates)
 		sms.POST("/templates", ctrl.CreateSMSTemplate)
+		sms.POST("/test", ctrl.TestSMS)
 	}
 
 	// 缓存管理

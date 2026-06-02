@@ -471,14 +471,14 @@ func (ctrl *CommentAdminController) GetCommentStats(c *gin.Context) {
 
 // ExportComments 导出评论
 // @Summary      导出评论
-// @Description  导出评论数据
+// @Description  导出评论数据为 Excel 文件
 // @Tags         评论审核
 // @Accept       json
-// @Produce      json
+// @Produce      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 // @Param        page       query     int     false  "页码"
 // @Param        page_size  query     int     false  "每页数量"
 // @Param        status     query     string  false  "审核状态"
-// @Success      200  {object}  response.Response{data=[]dto.CommentInfo}  "成功"
+// @Success      200  {file}    binary  "Excel 文件"
 // @Failure      400  {object}  response.Response  "参数错误"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/comments/export [get]
@@ -490,10 +490,16 @@ func (ctrl *CommentAdminController) ExportComments(c *gin.Context) {
 		return
 	}
 
-	list, err := comment.ExportComments(&req)
+	f, err := comment.ExportComments(&req)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+		response.Error(c, http.StatusInternalServerError, "导出失败: "+err.Error())
 		return
 	}
-	response.Success(c, list)
+
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Header("Content-Disposition", "attachment; filename=comments.xlsx")
+	if err := f.Write(c.Writer); err != nil {
+		response.Error(c, http.StatusInternalServerError, "写入文件失败")
+		return
+	}
 }

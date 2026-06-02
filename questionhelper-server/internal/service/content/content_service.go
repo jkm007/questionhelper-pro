@@ -14,6 +14,7 @@ import (
 	examRepo "questionhelper-server/internal/repository/exam"
 	questionRepo "questionhelper-server/internal/repository/question"
 	userRepo "questionhelper-server/internal/repository/user"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -935,6 +936,74 @@ func GetSearchHistory(userID uint, limit int) ([]dto.SearchHistoryInfo, error) {
 
 // ==================== 审核流程 ====================
 
+// SubmitReview 创作者将自己的私有内容提交为公共内容审核
+func SubmitReview(userID uint, req *dto.SubmitReviewRequest) error {
+	// 1. 检查内容是否存在且属于当前用户
+	if err := verifyContentOwnership(userID, req.ContentType, req.ContentID); err != nil {
+		return err
+	}
+
+	// 2. 检查是否已有待审核的申请
+	_, err := contentRepo.FindPendingReviewByContent(userID, req.ContentType, req.ContentID)
+	if err == nil {
+		return errors.New("该内容已有待审核的申请")
+	}
+
+	// 3. 创建审核实例
+	review := &model.ReviewInstance{
+		ContentType: req.ContentType,
+		ContentID:   req.ContentID,
+		CreatorID:   userID,
+		Status:      0, // 待审核
+	}
+	if err := contentRepo.CreateReviewInstance(review); err != nil {
+		return fmt.Errorf("创建审核实例失败: %w", err)
+	}
+
+	// 4. 记录审核步骤日志
+	stepLog := &model.ReviewStepLog{
+		InstanceID: review.ID,
+		StepIndex:  0,
+		Opinion:    "提交审核",
+		OperatedAt: time.Now(),
+	}
+	contentRepo.CreateReviewStepLog(stepLog)
+
+	logger.Infof("用户 %d 提交内容审核 %s:%d", userID, req.ContentType, req.ContentID)
+	return nil
+}
+
+// verifyContentOwnership 验证内容是否存在且属于指定用户
+func verifyContentOwnership(userID uint, contentType string, contentID uint) error {
+	switch contentType {
+	case "question":
+		question, err := questionRepo.FindByID(contentID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("题目不存在")
+			}
+			return fmt.Errorf("查询题目失败: %w", err)
+		}
+		if question.CreatorID != userID {
+			return errors.New("无权操作该题目")
+		}
+	case "exam":
+		exam, err := examRepo.FindExamByID(contentID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("考试不存在")
+			}
+			return fmt.Errorf("查询考试失败: %w", err)
+		}
+		if exam.CreatorID != userID {
+			return errors.New("无权操作该考试")
+		}
+	default:
+		return errors.New("不支持的内容类型")
+	}
+	return nil
+}
+
 // ListPendingReviews 获取待审核列表
 func ListPendingReviews(req *dto.ReviewListRequest) ([]dto.ReviewInstanceInfo, int64, error) {
 	instances, total, err := contentRepo.ListReviewInstances(req.Status, req.ContentType, req.GetOffset(), req.GetLimit())
@@ -1075,6 +1144,17 @@ func ApproveReview(reviewerID uint, id uint, req *dto.ApproveReviewRequest) erro
 	}
 	contentRepo.CreateReviewNotification(notification)
 
+	// 审核通过后通知创作者
+	approveNotification := &model.Notification{
+		UserID:     instance.CreatorID,
+		Type:       10, // 审核通知类型
+		Title:      "内容审核通过",
+		Content:    fmt.Sprintf("您提交的%s(ID:%d)已通过审核", instance.ContentType, instance.ContentID),
+		TargetType: instance.ContentType,
+		TargetID:   instance.ContentID,
+	}
+	database.DB.Create(approveNotification)
+
 	// 审核通过后更新内容状态为已发布（status=1）
 	switch instance.ContentType {
 	case "question":
@@ -1136,6 +1216,17 @@ func RejectReview(reviewerID uint, id uint, req *dto.RejectReviewRequest) error 
 		Message:    fmt.Sprintf("您的内容未通过审核: %s", req.Opinion),
 	}
 	contentRepo.CreateReviewNotification(notification)
+
+	// 审核拒绝后通知创作者
+	rejectNotification := &model.Notification{
+		UserID:     instance.CreatorID,
+		Type:       11, // 审核拒绝通知类型
+		Title:      "内容审核未通过",
+		Content:    fmt.Sprintf("您提交的%s(ID:%d)未通过审核，原因：%s", instance.ContentType, instance.ContentID, req.Opinion),
+		TargetType: instance.ContentType,
+		TargetID:   instance.ContentID,
+	}
+	database.DB.Create(rejectNotification)
 
 	logger.Infof("审核人 %d 拒绝审核 %d", reviewerID, id)
 	return nil

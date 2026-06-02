@@ -12,6 +12,7 @@ import (
 	practiceRepo "questionhelper-server/internal/repository/practice"
 	wrongRepo "questionhelper-server/internal/repository/wrong"
 	"questionhelper-server/pkg/consts"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/logger"
 )
 
@@ -227,6 +228,38 @@ func GetPracticeHistory(userID uint, req *dto.PracticeListRequest) ([]dto.Practi
 // GetPracticeStats 练习统计
 func GetPracticeStats(userID uint) (map[string]interface{}, error) {
 	return practiceRepo.GetUserPracticeStats(userID)
+}
+
+// PausePractice 暂停练习
+func PausePractice(sessionID, userID uint) error {
+	var session model.PracticeSession
+	if err := database.DB.First(&session, sessionID).Error; err != nil {
+		return errors.New("练习不存在")
+	}
+	if session.UserID != userID {
+		return errors.New("无权操作此练习")
+	}
+	if session.Status != 0 { // 0=进行中
+		return errors.New("只能暂停进行中的练习")
+	}
+	session.Status = 3 // 3=暂停
+	return database.DB.Save(&session).Error
+}
+
+// ResumePractice 恢复练习
+func ResumePractice(sessionID, userID uint) error {
+	var session model.PracticeSession
+	if err := database.DB.First(&session, sessionID).Error; err != nil {
+		return errors.New("练习不存在")
+	}
+	if session.UserID != userID {
+		return errors.New("无权操作此练习")
+	}
+	if session.Status != 3 { // 3=暂停
+		return errors.New("只能恢复暂停的练习")
+	}
+	session.Status = 0 // 0=进行中
+	return database.DB.Save(&session).Error
 }
 
 // updateWrongQuestion 更新错题本

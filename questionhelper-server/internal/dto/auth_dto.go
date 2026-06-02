@@ -5,13 +5,15 @@ import "time"
 // LoginRequest 登录请求
 type LoginRequest struct {
 	Username   string `json:"username" binding:"required"`
-	Password   string `json:"password" binding:"required"`
+	Password   string `json:"password" binding:"required_if=LoginType password"`
 	CaptchaID  string `json:"captchaId"`
 	Captcha    string `json:"captchaCode"`
 	DeviceID   string `json:"deviceId"`   // 设备唯一标识
 	DeviceInfo string `json:"deviceInfo"` // 设备信息（User-Agent）
 	UserAgent  string `json:"-"`          // User-Agent 请求头（由控制器自动填充）
 	RememberMe bool   `json:"rememberMe"` // 记住我，Refresh Token延长至30天
+	LoginType  string `json:"loginType" binding:"omitempty,oneof=password email_code"` // 登录类型，默认 password
+	EmailCode  string `json:"emailCode"`  // 邮箱验证码（邮箱登录时必填）
 }
 
 // LoginResponse 登录响应

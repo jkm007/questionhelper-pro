@@ -324,6 +324,66 @@ func (ctrl *FileController) GetAccessLogs(c *gin.Context) {
 	response.Page(c, logs, total, req.Page, req.PageSize)
 }
 
+// ==================== Query ====================
+
+// GetFile 获取文件信息
+// @Summary      获取文件信息
+// @Description  根据文件ID获取文件详细信息
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "文件ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的文件ID"
+// @Failure      404  {object}  response.Response  "文件不存在"
+// @Router       /file/{id} [get]
+// @Security     BearerAuth
+func (ctrl *FileController) GetFile(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的文件ID")
+		return
+	}
+	file, err := fileService.GetFile(uint(id))
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "文件不存在")
+		return
+	}
+	response.Success(c, file)
+}
+
+// ListFiles 文件列表
+// @Summary      获取文件列表
+// @Description  获取文件列表，支持按类型、关键词过滤和排序
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        page        query     int     false  "页码"           default(1)
+// @Param        page_size   query     int     false  "每页数量"       default(20)
+// @Param        file_type   query     string  false  "文件类型(扩展名)"
+// @Param        keyword     query     string  false  "文件名关键词"
+// @Param        sort_by     query     string  false  "排序字段"       Enums(created_at, updated_at, size, name)  default(created_at)
+// @Param        sort_order  query     string  false  "排序方式"       Enums(asc, desc)  default(desc)
+// @Success      200  {object}  response.PageResponse  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/list [get]
+// @Security     BearerAuth
+func (ctrl *FileController) ListFiles(c *gin.Context) {
+	var req dto.FileListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误")
+		return
+	}
+
+	files, total, err := fileService.ListFilesWithFilter(req.Page, req.PageSize, req.FileType, req.Keyword, req.SortBy, req.SortOrder)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "查询失败")
+		return
+	}
+	response.Page(c, files, total, req.Page, req.PageSize)
+}
+
 // ==================== Legacy ====================
 
 // DeleteFile 删除文件

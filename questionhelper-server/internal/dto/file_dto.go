@@ -1,5 +1,22 @@
 package dto
 
+// ==================== File List ====================
+
+// FileListRequest 文件列表请求
+type FileListRequest struct {
+	Page      int    `form:"page,default=1"`
+	PageSize  int    `form:"page_size,default=20"`
+	FileType  string `form:"file_type"`
+	Keyword   string `form:"keyword"`
+	SortBy    string `form:"sort_by,default=created_at"`
+	SortOrder string `form:"sort_order,default=desc"`
+}
+
+// BatchDeleteFilesRequest 批量删除文件请求
+type BatchDeleteFilesRequest struct {
+	IDs []uint `json:"ids" binding:"required,min=1"`
+}
+
 // ==================== File Upload ====================
 
 // ImageUploadResponse 图片上传响应

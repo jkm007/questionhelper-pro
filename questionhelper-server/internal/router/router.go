@@ -58,6 +58,7 @@ func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 	examExtCtrl := exam.NewExamExtController()
 	classCtrl := class.NewClassController()
 	practiceCtrl := practice.NewPracticeController()
+	practiceAdminCtrl := practice.NewPracticeAdminController()
 	wrongCtrl := wrong.NewWrongController()
 	commentCtrl := comment.NewCommentController()
 	commentAdminCtrl := comment.NewCommentAdminController()
@@ -86,7 +87,7 @@ func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 			SetupQuestionRoutes(authorized, questionCtrl, versionCtrl, shareCtrl)
 			SetupExamRoutes(authorized, examCtrl, answerCtrl, examExtCtrl)
 			SetupClassRoutes(authorized, classCtrl)
-			SetupPracticeRoutes(authorized, practiceCtrl)
+			SetupPracticeRoutes(authorized, practiceCtrl, practiceAdminCtrl)
 			SetupWrongRoutes(authorized, wrongCtrl)
 			SetupCommentRoutes(authorized, commentCtrl)
 			SetupNotificationRoutes(authorized, notificationCtrl)
@@ -113,6 +114,7 @@ func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 			SetupAdminContentRoutes(admin, contentCtrl)
 			SetupAdminStatisticsRoutes(admin, statisticsAdminCtrl, statisticsCtrl)
 			SetupAdminFileRoutes(admin, fileAdminCtrl)
+			SetupAdminPracticeRoutes(admin, practiceAdminCtrl)
 		}
 	}
 

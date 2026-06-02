@@ -371,6 +371,19 @@ func FindReviewInstanceByID(id uint) (*model.ReviewInstance, error) {
 	return &instance, err
 }
 
+// CreateReviewInstance 创建审核实例
+func CreateReviewInstance(instance *model.ReviewInstance) error {
+	return database.DB.Create(instance).Error
+}
+
+// FindPendingReviewByContent 查找指定内容的待审核实例
+func FindPendingReviewByContent(creatorID uint, contentType string, contentID uint) (*model.ReviewInstance, error) {
+	var instance model.ReviewInstance
+	err := database.DB.Where("creator_id = ? AND content_type = ? AND content_id = ? AND status = 0",
+		creatorID, contentType, contentID).First(&instance).Error
+	return &instance, err
+}
+
 // ListReviewInstances 获取审核实例列表
 func ListReviewInstances(status int8, contentType string, offset, limit int) ([]model.ReviewInstance, int64, error) {
 	var instances []model.ReviewInstance

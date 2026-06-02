@@ -831,6 +831,34 @@ func (ctrl *ContentController) GetSearchHistory(c *gin.Context) {
 
 // ==================== 审核流程 ====================
 
+// SubmitReview 提交内容审核
+// @Summary      提交内容审核
+// @Description  创作者将自己的私有内容提交为公共内容审核
+// @Tags         内容管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.SubmitReviewRequest  true  "提交审核数据"
+// @Success      200  {object}  response.Response  "提交成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /content/reviews [post]
+// @Security     BearerAuth
+func (ctrl *ContentController) SubmitReview(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	var req dto.SubmitReviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+
+	if err := content.SubmitReview(userID, &req); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "提交成功", nil)
+}
+
 // ListPendingReviews 获取待审核列表
 // @Summary      获取待审核列表
 // @Description  获取待审核内容列表，支持分页

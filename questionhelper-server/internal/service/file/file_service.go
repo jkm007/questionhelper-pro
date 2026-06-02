@@ -1156,6 +1156,16 @@ func ListFiles(uploaderID *uint, page, pageSize int) ([]model.File, int64, error
 	return fileRepo.ListFiles(uploaderID, page, pageSize)
 }
 
+// ListFilesWithFilter 带过滤条件的文件列表
+func ListFilesWithFilter(page, pageSize int, fileType, keyword, sortBy, sortOrder string) ([]model.File, int64, error) {
+	return fileRepo.ListFilesWithFilter(page, pageSize, fileType, keyword, sortBy, sortOrder)
+}
+
+// BatchDeleteFiles 批量删除文件
+func BatchDeleteFiles(ids []uint) error {
+	return fileRepo.BatchDeleteFiles(ids)
+}
+
 // ==================== Helper Functions ====================
 
 // getImageDimensions 获取图片尺寸（简单实现，返回0表示无法获取）

@@ -136,6 +136,60 @@ func (ctrl *PracticeController) FinishPractice(c *gin.Context) {
 	response.SuccessWithMessage(c, "练习完成", nil)
 }
 
+// PausePractice 暂停练习
+// @Summary      暂停练习
+// @Description  暂停进行中的练习会话
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "练习ID"
+// @Success      200  {object}  response.Response  "暂停成功"
+// @Failure      400  {object}  response.Response  "无效的练习ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/{id}/pause [post]
+// @Security     BearerAuth
+func (ctrl *PracticeController) PausePractice(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的练习ID")
+		return
+	}
+
+	if err := practice.PausePractice(uint(id), userID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "练习已暂停", nil)
+}
+
+// ResumePractice 恢复练习
+// @Summary      恢复练习
+// @Description  恢复已暂停的练习会话
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "练习ID"
+// @Success      200  {object}  response.Response  "恢复成功"
+// @Failure      400  {object}  response.Response  "无效的练习ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/{id}/resume [post]
+// @Security     BearerAuth
+func (ctrl *PracticeController) ResumePractice(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的练习ID")
+		return
+	}
+
+	if err := practice.ResumePractice(uint(id), userID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "练习已恢复", nil)
+}
+
 // StartMockExam 开始模拟考试
 // @Summary      开始模拟考试
 // @Description  创建一个新的模拟考试会话

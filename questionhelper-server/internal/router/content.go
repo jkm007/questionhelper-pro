@@ -83,6 +83,12 @@ func SetupContentRoutes(r *gin.RouterGroup, ctrl *content.ContentController) {
 		search.GET("/hot", ctrl.GetHotSearches)
 		search.GET("/history", ctrl.GetSearchHistory)
 	}
+
+	// 提交内容审核（用户提交审核，保留在 authorized 组）
+	contentReviews := r.Group("/content")
+	{
+		contentReviews.POST("/reviews", ctrl.SubmitReview)
+	}
 }
 
 // SetupAdminContentRoutes 管理员内容路由

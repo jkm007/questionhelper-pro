@@ -5,7 +5,7 @@ import (
 	"questionhelper-server/internal/controller/practice"
 )
 
-func SetupPracticeRoutes(r *gin.RouterGroup, ctrl *practice.PracticeController) {
+func SetupPracticeRoutes(r *gin.RouterGroup, ctrl *practice.PracticeController, adminCtrl *practice.PracticeAdminController) {
 	// 与设计文档保持一致使用 /practice（单数）
 	p := r.Group("/practice")
 	{
@@ -16,6 +16,8 @@ func SetupPracticeRoutes(r *gin.RouterGroup, ctrl *practice.PracticeController) 
 		p.POST("/start", ctrl.StartPractice)
 		p.POST("/submit", ctrl.SubmitPractice)
 		p.POST("/:id/finish", ctrl.FinishPractice)
+		p.POST("/:id/pause", ctrl.PausePractice)
+		p.POST("/:id/resume", ctrl.ResumePractice)
 
 		// 模拟考试
 		mock := p.Group("/mock")
@@ -50,6 +52,15 @@ func SetupPracticeRoutes(r *gin.RouterGroup, ctrl *practice.PracticeController) 
 
 		// 排行榜
 		p.GET("/leaderboard", ctrl.GetLeaderboard)
+		p.GET("/leaderboard/rank", ctrl.GetMyRank)
+
+		// 练习记录导出/搜索
+		p.GET("/records/export", ctrl.ExportPracticeRecords)
+		p.GET("/records/search", ctrl.SearchPracticeRecords)
+
+		// 打卡状态/连续打卡
+		p.GET("/checkin/status", ctrl.GetCheckinStatus)
+		p.GET("/checkin/streak", ctrl.GetCheckinStreak)
 
 		// 闯关模式
 		challenge := p.Group("/challenge")
@@ -60,5 +71,18 @@ func SetupPracticeRoutes(r *gin.RouterGroup, ctrl *practice.PracticeController) 
 			challenge.POST("/levels/:id/submit", ctrl.SubmitChallenge)
 			challenge.GET("/progress", ctrl.GetChallengeProgress)
 		}
+	}
+}
+
+// SetupAdminPracticeRoutes 练习管理端路由
+func SetupAdminPracticeRoutes(adminGroup *gin.RouterGroup, adminCtrl *practice.PracticeAdminController) {
+	adminPractice := adminGroup.Group("/practice")
+	{
+		adminPractice.GET("/statistics", adminCtrl.GetPracticeStatistics)
+		adminPractice.GET("/users", adminCtrl.ListPracticeUsers)
+		adminPractice.GET("/users/:id", adminCtrl.GetPracticeUserDetail)
+		adminPractice.GET("/hot-questions", adminCtrl.GetHotQuestions)
+		adminPractice.GET("/accuracy-analysis", adminCtrl.GetAccuracyAnalysis)
+		adminPractice.GET("/difficulty-distribution", adminCtrl.GetDifficultyDistribution)
 	}
 }

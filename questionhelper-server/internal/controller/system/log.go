@@ -12,12 +12,17 @@ import (
 
 // ListOperationLogs 操作日志列表
 // @Summary      获取操作日志列表
-// @Description  获取系统操作日志列表，支持分页
+// @Description  获取系统操作日志列表，支持分页和筛选
 // @Tags         系统日志
 // @Accept       json
 // @Produce      json
-// @Param        page       query     int  false  "页码"
-// @Param        page_size  query     int  false  "每页数量"
+// @Param        page       query     int     false  "页码"
+// @Param        page_size  query     int     false  "每页数量"
+// @Param        module     query     string  false  "模块"
+// @Param        action     query     string  false  "操作"
+// @Param        user_id    query     int     false  "用户ID"
+// @Param        start_at   query     string  false  "开始时间"
+// @Param        end_at     query     string  false  "结束时间"
 // @Success      200  {object}  response.Response  "成功"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/logs/operation [get]
@@ -25,6 +30,11 @@ import (
 func (ctrl *SystemController) ListOperationLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	module := c.Query("module")
+	action := c.Query("action")
+	userID, _ := strconv.ParseUint(c.Query("user_id"), 10, 32)
+	startAt := c.Query("start_at")
+	endAt := c.Query("end_at")
 
 	if page <= 0 {
 		page = 1
@@ -33,7 +43,7 @@ func (ctrl *SystemController) ListOperationLogs(c *gin.Context) {
 		pageSize = 10
 	}
 
-	logs, total, err := system.ListOperationLogs(page, pageSize)
+	logs, total, err := system.ListOperationLogs(page, pageSize, module, action, uint(userID), startAt, endAt)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -43,12 +53,17 @@ func (ctrl *SystemController) ListOperationLogs(c *gin.Context) {
 
 // ListLoginLogs 登录日志列表
 // @Summary      获取登录日志列表
-// @Description  获取系统登录日志列表，支持分页
+// @Description  获取系统登录日志列表，支持分页和筛选
 // @Tags         系统日志
 // @Accept       json
 // @Produce      json
-// @Param        page       query     int  false  "页码"
-// @Param        page_size  query     int  false  "每页数量"
+// @Param        page       query     int     false  "页码"
+// @Param        page_size  query     int     false  "每页数量"
+// @Param        username   query     string  false  "用户名"
+// @Param        login_type query     string  false  "登录类型"
+// @Param        status     query     int     false  "状态:0=失败,1=成功"
+// @Param        start_at   query     string  false  "开始时间"
+// @Param        end_at     query     string  false  "结束时间"
 // @Success      200  {object}  response.Response  "成功"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
 // @Router       /admin/logs/login [get]
@@ -56,6 +71,19 @@ func (ctrl *SystemController) ListOperationLogs(c *gin.Context) {
 func (ctrl *SystemController) ListLoginLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	username := c.Query("username")
+	loginType := c.Query("login_type")
+	startAt := c.Query("start_at")
+	endAt := c.Query("end_at")
+
+	var statusPtr *int8
+	if s := c.Query("status"); s != "" {
+		statusVal, err := strconv.Atoi(s)
+		if err == nil {
+			v := int8(statusVal)
+			statusPtr = &v
+		}
+	}
 
 	if page <= 0 {
 		page = 1
@@ -64,7 +92,7 @@ func (ctrl *SystemController) ListLoginLogs(c *gin.Context) {
 		pageSize = 10
 	}
 
-	logs, total, err := system.ListLoginLogs(page, pageSize)
+	logs, total, err := system.ListLoginLogs(page, pageSize, username, loginType, statusPtr, startAt, endAt)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

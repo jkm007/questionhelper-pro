@@ -5,8 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"questionhelper-server/internal/dto"
+	"questionhelper-server/internal/model"
 	"questionhelper-server/internal/service/class"
+	"questionhelper-server/pkg/database"
 	"questionhelper-server/pkg/response"
 )
 
@@ -1527,4 +1530,119 @@ func (ctrl *ClassController) GetClassNotice(c *gin.Context) {
 		return
 	}
 	response.Success(c, info)
+}
+
+// ==================== Member Detail & Role ====================
+
+// GetMemberDetail 获取成员详情
+func (ctrl *ClassController) GetMemberDetail(c *gin.Context) {
+	classID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的班级ID")
+		return
+	}
+	userID, err := strconv.ParseUint(c.Param("userId"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的用户ID")
+		return
+	}
+
+	var member model.ClassMember
+	if err := database.DB.Where("class_id = ? AND user_id = ?", classID, userID).First(&member).Error; err != nil {
+		response.Error(c, http.StatusNotFound, "成员不存在")
+		return
+	}
+
+	var user model.User
+	database.DB.First(&user, member.UserID)
+
+	response.Success(c, gin.H{
+		"member": member,
+		"user":   user,
+	})
+}
+
+// SetMemberRole 设置成员角色
+func (ctrl *ClassController) SetMemberRole(c *gin.Context) {
+	classID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的班级ID")
+		return
+	}
+	userID, err := strconv.ParseUint(c.Param("userId"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的用户ID")
+		return
+	}
+
+	var req struct {
+		Role int8 `json:"role" binding:"required,min=1,max=3"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误")
+		return
+	}
+
+	// 不允许修改创建者角色
+	var cls model.Class
+	database.DB.First(&cls, classID)
+	if uint(userID) == cls.CreatorID {
+		response.Error(c, http.StatusBadRequest, "不能修改创建者角色")
+		return
+	}
+
+	database.DB.Model(&model.ClassMember{}).Where("class_id = ? AND user_id = ?", classID, userID).Update("role", req.Role)
+	response.Success(c, nil)
+}
+
+// ExportMembers 导出成员
+func (ctrl *ClassController) ExportMembers(c *gin.Context) {
+	classID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的班级ID")
+		return
+	}
+
+	var members []model.ClassMember
+	database.DB.Where("class_id = ?", classID).Find(&members)
+
+	response.Success(c, members)
+}
+
+// ==================== Discussion Reply ====================
+
+// CreateDiscussionReply 创建讨论回复
+func (ctrl *ClassController) CreateDiscussionReply(c *gin.Context) {
+	discussionID, err := strconv.ParseUint(c.Param("discussionId"), 10, 64)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "无效的讨论ID")
+		return
+	}
+	userID := c.GetUint("user_id")
+
+	var req struct {
+		Content  string `json:"content" binding:"required"`
+		ParentID *uint  `json:"parent_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "参数错误")
+		return
+	}
+
+	reply := &model.ClassDiscussionReply{
+		DiscussionID: uint(discussionID),
+		UserID:       userID,
+		Content:      req.Content,
+		ParentID:     req.ParentID,
+	}
+
+	if err := database.DB.Create(reply).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "回复失败")
+		return
+	}
+
+	// 更新讨论回复数
+	database.DB.Model(&model.ClassDiscussion{}).Where("id = ?", discussionID).Update("reply_count", gorm.Expr("reply_count + 1"))
+
+	response.Success(c, reply)
 }
