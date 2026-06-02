@@ -72,6 +72,7 @@ func Setup(cfg *config.Config) *gin.Engine {
 
 		authorized := v1.Group("")
 		authorized.Use(middleware.AuthMiddleware())
+		authorized.Use(middleware.SensitiveFilterMiddleware()) // T05: 敏感词过滤中间件
 		{
 			SetupUserRoutes(authorized, userCtrl, profileCtrl, tagCtrl, applyCtrl)
 			SetupUserAuthRoutes(authorized, authCtrl)

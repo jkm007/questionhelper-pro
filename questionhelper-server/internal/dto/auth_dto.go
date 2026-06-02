@@ -10,6 +10,7 @@ type LoginRequest struct {
 	Captcha    string `json:"captchaCode"`
 	DeviceID   string `json:"deviceId"`   // 设备唯一标识
 	DeviceInfo string `json:"deviceInfo"` // 设备信息（User-Agent）
+	UserAgent  string `json:"-"`          // User-Agent 请求头（由控制器自动填充）
 	RememberMe bool   `json:"rememberMe"` // 记住我，Refresh Token延长至30天
 }
 
@@ -22,16 +23,17 @@ type LoginResponse struct {
 	User         UserInfo `json:"user,omitempty"`
 }
 
-// RegisterRequest 注册请求
+// RegisterRequest 注册请求（T08: 邮箱必填，T17: 用户名4-20，T18: 昵称2-20，T19: 验证码必填）
 type RegisterRequest struct {
-	Username        string `json:"username" binding:"required,min=2,max=50"`
-	Password        string `json:"password" binding:"required,min=6,max=20"`
+	Username        string `json:"username" binding:"required,min=4,max=20"`          // T17: 4-20字符
+	Password        string `json:"password" binding:"required,min=6,max=20,password"` // T09: 需包含字母+数字（自定义验证器）
 	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=Password"`
-	Nickname        string `json:"nickname" binding:"omitempty,max=50"`
+	Nickname        string `json:"nickname" binding:"omitempty,min=2,max=20"` // T18: 2-20字符
 	Phone           string `json:"phone" binding:"omitempty"`
-	Email           string `json:"email" binding:"omitempty,email"`
-	CaptchaID       string `json:"captchaId"`
-	CaptchaCode     string `json:"captchaCode"`
+	Email           string `json:"email" binding:"required,email"` // T08: 邮箱必填
+	EmailCode       string `json:"emailCode"`                      // T08: 邮箱验证码
+	CaptchaID       string `json:"captchaId" binding:"required"`   // T19: 必填
+	CaptchaCode     string `json:"captchaCode" binding:"required"` // T19: 必填
 	Agreement       bool   `json:"agreement" binding:"required"`
 	Source          string `json:"source"` // 注册来源:h5/miniapp/app/web
 }
@@ -53,15 +55,22 @@ type RefreshTokenRequest struct {
 // ChangePasswordRequest 修改密码请求
 type ChangePasswordRequest struct {
 	OldPassword     string `json:"oldPassword" binding:"required"`
-	NewPassword     string `json:"newPassword" binding:"required,min=6,max=20"`
+	NewPassword     string `json:"newPassword" binding:"required,min=6,max=20,password"`
 	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=NewPassword"`
+}
+
+// RequestPasswordResetRequest 请求重置密码请求（T23: 验证码必填）
+type RequestPasswordResetRequest struct {
+	Account     string `json:"account" binding:"required"`     // 用户名/手机号/邮箱
+	CaptchaID   string `json:"captchaId" binding:"required"`   // T23: 图形验证码ID
+	CaptchaCode string `json:"captchaCode" binding:"required"` // T23: 图形验证码
 }
 
 // ResetPasswordRequest 重置密码请求
 type ResetPasswordRequest struct {
 	Account     string `json:"account" binding:"required"` // 用户名/手机号/邮箱
 	Code        string `json:"code" binding:"required"`
-	NewPassword string `json:"newPassword" binding:"required,min=6,max=20"`
+	NewPassword string `json:"newPassword" binding:"required,min=6,max=20,password"`
 }
 
 // CaptchaResponse 验证码响应
@@ -114,6 +123,25 @@ type UserDataExport struct {
 	WrongQuestions interface{} `json:"wrongQuestions"`
 	Favorites      interface{} `json:"favorites"`
 	Comments       interface{} `json:"comments"`
+}
+
+// SwitchRoleRequest 角色切换请求
+type SwitchRoleRequest struct {
+	RoleID uint `json:"role_id" binding:"required"`
+}
+
+// SecuritySettingsRequest 安全设置更新请求
+type SecuritySettingsRequest struct {
+	LoginNotification    *bool `json:"loginNotification"`    // 新登录通知
+	PasswordChangeNotify *bool `json:"passwordChangeNotify"` // 密码变更通知
+	DeviceManageNotify   *bool `json:"deviceManageNotify"`   // 设备管理通知
+}
+
+// SecuritySettingsResponse 安全设置响应
+type SecuritySettingsResponse struct {
+	LoginNotification    bool `json:"loginNotification"`
+	PasswordChangeNotify bool `json:"passwordChangeNotify"`
+	DeviceManageNotify   bool `json:"deviceManageNotify"`
 }
 
 // OAuthBindRequest 绑定第三方账号请求

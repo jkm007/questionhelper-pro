@@ -44,17 +44,20 @@ func (User) TableName() string {
 	return "users"
 }
 
-// UserPrivacy 用户隐私设置表
+// UserPrivacy 用户隐私与安全设置表
 type UserPrivacy struct {
-	ID              uint      `gorm:"primarykey" json:"id"`
-	UserID          uint      `gorm:"uniqueIndex" json:"user_id"`
-	ProfileVisible  int8      `gorm:"default:1" json:"profile_visible"`  // 个人主页可见性:1=所有人,2=仅班级成员,3=仅自己
-	RealnameVisible int8      `gorm:"default:1" json:"realname_visible"` // 真实姓名可见性
-	EmailVisible    int8      `gorm:"default:1" json:"email_visible"`    // 邮箱可见性
-	StatsVisible    int8      `gorm:"default:1" json:"stats_visible"`    // 学习统计可见性
-	ClassVisible    int8      `gorm:"default:1" json:"class_visible"`    // 班级信息可见性
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID                   uint      `gorm:"primarykey" json:"id"`
+	UserID               uint      `gorm:"uniqueIndex" json:"user_id"`
+	ProfileVisible       int8      `gorm:"default:1" json:"profile_visible"`           // 个人主页可见性:1=所有人,2=仅班级成员,3=仅自己
+	RealnameVisible      int8      `gorm:"default:1" json:"realname_visible"`          // 真实姓名可见性
+	EmailVisible         int8      `gorm:"default:1" json:"email_visible"`             // 邮箱可见性
+	StatsVisible         int8      `gorm:"default:1" json:"stats_visible"`             // 学习统计可见性
+	ClassVisible         int8      `gorm:"default:1" json:"class_visible"`             // 班级信息可见性
+	LoginNotification    bool      `gorm:"default:true" json:"login_notification"`     // 新登录通知
+	PasswordChangeNotify bool      `gorm:"default:true" json:"password_change_notify"` // 密码变更通知
+	DeviceManageNotify   bool      `gorm:"default:true" json:"device_manage_notify"`   // 设备管理通知
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 func (UserPrivacy) TableName() string {

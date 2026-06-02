@@ -10,8 +10,10 @@ import (
 	"questionhelper-server/internal/router"
 	"questionhelper-server/pkg/config"
 	"questionhelper-server/pkg/database"
+	"questionhelper-server/pkg/email"
 	"questionhelper-server/pkg/jwt"
 	"questionhelper-server/pkg/logger"
+	"questionhelper-server/pkg/sms"
 )
 
 func main() {
@@ -27,6 +29,25 @@ func main() {
 	database.InitRedis(cfg.Redis)
 
 	jwt.Init(cfg.JWT.Secret)
+
+	// 将 config.EmailConfig 转换为 email.EmailConfig
+	email.Init(&email.EmailConfig{
+		SMTPHost:    cfg.Email.SMTPHost,
+		SMTPPort:    cfg.Email.SMTPPort,
+		Username:    cfg.Email.Username,
+		Password:    cfg.Email.Password,
+		FromAddress: cfg.Email.FromAddress,
+		FromName:    cfg.Email.FromName,
+		UseTLS:      cfg.Email.UseTLS,
+	})
+
+	sms.Init(&sms.SMSConfig{
+		Provider:     cfg.SMS.Provider,
+		AccessKey:    cfg.SMS.AccessKey,
+		AccessSecret: cfg.SMS.AccessSecret,
+		SignName:     cfg.SMS.SignName,
+		TemplateCode: cfg.SMS.TemplateCode,
+	})
 
 	r := router.Setup(cfg)
 

@@ -3,12 +3,14 @@ package auth
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/service/auth"
 	"questionhelper-server/pkg/config"
+	apperr "questionhelper-server/pkg/errors"
 	"questionhelper-server/pkg/response"
 )
 
@@ -30,17 +32,33 @@ func (ac *AuthController) Login(c *gin.Context) {
 
 	// 获取客户端信息
 	req.DeviceInfo = c.ClientIP()
+	req.UserAgent = c.GetHeader("User-Agent")
 
 	result, err := auth.Login(&req, ac.jwtCfg)
 	if err != nil {
-		response.Error(c, http.StatusUnauthorized, err.Error())
+		errMsg := err.Error()
+		switch {
+		case strings.Contains(errMsg, "频繁"):
+			response.ErrorWithCode(c, http.StatusTooManyRequests, apperr.ErrTooManyRequests.Code, errMsg)
+		case strings.Contains(errMsg, "验证码"):
+			response.ErrorWithCode(c, http.StatusUnauthorized, apperr.ErrCaptchaWrong.Code, errMsg)
+		case strings.Contains(errMsg, "禁用") || strings.Contains(errMsg, "注销中"):
+			response.ErrorWithCode(c, http.StatusForbidden, apperr.ErrAccountDisabled.Code, errMsg)
+		case strings.Contains(errMsg, "锁定"):
+			response.ErrorWithCode(c, http.StatusForbidden, apperr.ErrAccountDisabled.Code, errMsg)
+		default:
+			response.ErrorWithCode(c, http.StatusUnauthorized, apperr.ErrUnauthorized.Code, errMsg)
+		}
 		return
 	}
+
+	// T15: set refresh token as httpOnly cookie for web clients
+	c.SetCookie("refresh_token", result.RefreshToken, 7*24*60*60, "/", "", false, true)
 
 	response.Success(c, result)
 }
 
-// Register 用户注册
+// Register 用户注册（T07: 注册后自动登录）
 func (ac *AuthController) Register(c *gin.Context) {
 	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,12 +66,26 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	if err := auth.Register(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+	result, err := auth.Register(&req, ac.jwtCfg)
+	if err != nil {
+		errMsg := err.Error()
+		switch {
+		case strings.Contains(errMsg, "已存在") || strings.Contains(errMsg, "已被注册"):
+			response.ErrorWithCode(c, http.StatusConflict, apperr.ErrUserExists.Code, errMsg)
+		case strings.Contains(errMsg, "验证码已过期") || strings.Contains(errMsg, "验证码已过期或不存在"):
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrCaptchaExpired.Code, errMsg)
+		case strings.Contains(errMsg, "验证码"):
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrCaptchaWrong.Code, errMsg)
+		default:
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrParam.Code, errMsg)
+		}
 		return
 	}
 
-	response.SuccessWithMessage(c, "注册成功", nil)
+	// T15: set refresh token as httpOnly cookie for web clients
+	c.SetCookie("refresh_token", result.RefreshToken, 7*24*60*60, "/", "", false, true)
+
+	response.SuccessWithMessage(c, "注册成功", result)
 }
 
 // Logout 用户退出
@@ -68,6 +100,9 @@ func (ac *AuthController) Logout(c *gin.Context) {
 		return
 	}
 
+	// T15: clear refresh token cookie on logout
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+
 	response.SuccessWithMessage(c, "退出成功", nil)
 }
 
@@ -80,21 +115,28 @@ func (ac *AuthController) LogoutAll(c *gin.Context) {
 		return
 	}
 
+	// T15: clear refresh token cookie on logout all
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }
 
 // RequestPasswordReset 请求重置密码
 func (ac *AuthController) RequestPasswordReset(c *gin.Context) {
-	var req struct {
-		Account string `json:"account" binding:"required"`
-	}
+	var req dto.RequestPasswordResetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
 		return
 	}
 
-	if err := auth.RequestPasswordReset(req.Account); err != nil {
-		response.Error(c, http.StatusInternalServerError, err.Error())
+	if err := auth.RequestPasswordReset(&req); err != nil {
+		errMsg := err.Error()
+		switch {
+		case strings.Contains(errMsg, "验证码"):
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrCaptchaWrong.Code, errMsg)
+		default:
+			response.Error(c, http.StatusInternalServerError, errMsg)
+		}
 		return
 	}
 
@@ -128,7 +170,17 @@ func (ac *AuthController) DeactivateAccount(c *gin.Context) {
 	}
 
 	if err := auth.DeactivateAccount(userID, req.Password); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		errMsg := err.Error()
+		switch {
+		case strings.Contains(errMsg, "用户不存在"):
+			response.ErrorWithCode(c, http.StatusNotFound, apperr.ErrUserNotFound.Code, errMsg)
+		case strings.Contains(errMsg, "密码错误"):
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrPasswordWrong.Code, errMsg)
+		case strings.Contains(errMsg, "30天内不可再次申请注销"):
+			response.ErrorWithCode(c, http.StatusForbidden, apperr.ErrDeactivateCooldown.Code, errMsg)
+		default:
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrParam.Code, errMsg)
+		}
 		return
 	}
 
@@ -149,9 +201,12 @@ func (ac *AuthController) ConfirmDeactivate(c *gin.Context) {
 	}
 
 	if err := auth.ConfirmDeactivate(userID, req.Code); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrCaptchaExpired.Code, err.Error())
 		return
 	}
+
+	// T15: clear refresh token cookie on account deactivation
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 
 	response.SuccessWithMessage(c, "注销申请已提交，30天后将永久删除账号", nil)
 }
@@ -161,7 +216,12 @@ func (ac *AuthController) CancelDeactivate(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	if err := auth.CancelDeactivate(userID); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "用户不存在") {
+			response.ErrorWithCode(c, http.StatusNotFound, apperr.ErrUserNotFound.Code, errMsg)
+		} else {
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrParam.Code, errMsg)
+		}
 		return
 	}
 
@@ -234,6 +294,9 @@ func (ac *AuthController) KickAllDevices(c *gin.Context) {
 		return
 	}
 
+	// T15: clear refresh token cookie when kicking all devices
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }
 
@@ -268,15 +331,48 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 	}
 
 	if err := auth.ChangePassword(userID, req.OldPassword, req.NewPassword); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error())
+		errMsg := err.Error()
+		switch {
+		case strings.Contains(errMsg, "用户不存在"):
+			response.ErrorWithCode(c, http.StatusNotFound, apperr.ErrUserNotFound.Code, errMsg)
+		case strings.Contains(errMsg, "密码错误"):
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrPasswordWrong.Code, errMsg)
+		default:
+			response.ErrorWithCode(c, http.StatusBadRequest, apperr.ErrParam.Code, errMsg)
+		}
 		return
 	}
 
 	response.SuccessWithMessage(c, "密码修改成功", nil)
 }
 
-// UpdateSecuritySettings 更新安全设置（占位）
+// GetSecuritySettings 获取安全设置
+func (ac *AuthController) GetSecuritySettings(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	settings, err := auth.GetSecuritySettings(userID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(c, settings)
+}
+
+// UpdateSecuritySettings 更新安全设置
 func (ac *AuthController) UpdateSecuritySettings(c *gin.Context) {
-	// TODO: 实现安全设置更新
+	userID := c.GetUint("user_id")
+
+	var req dto.SecuritySettingsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "请求参数错误: "+err.Error())
+		return
+	}
+
+	if err := auth.UpdateSecuritySettings(userID, &req); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	response.SuccessWithMessage(c, "安全设置已更新", nil)
 }

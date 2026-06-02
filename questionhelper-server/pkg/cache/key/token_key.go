@@ -1,6 +1,9 @@
 package key
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Token 相关缓存 Key（统一使用 qh: 前缀）
 
@@ -53,3 +56,19 @@ func ResetTokenKey(uid uint) string {
 func DeactivateCodeKey(uid uint) string {
 	return fmt.Sprintf("qh:deactivate:code:%d", uid)
 }
+
+// DeactivateCooldownKey 注销取消冷却期 Key（30天内不可再次申请注销）
+func DeactivateCooldownKey(uid uint) string {
+	return fmt.Sprintf("qh:deactivate:cooldown:%d", uid)
+}
+
+// DeactivateCooldownDuration 注销取消冷却期时长（30天）
+const DeactivateCooldownDuration = 30 * 24 * time.Hour
+
+// ---- 通用验证码过期时间常量 ----
+
+// CodeExpire 验证码过期时间（5分钟）
+const CodeExpire = 300
+
+// CodeLimitExpire 发送限制时间（1分钟）
+const CodeLimitExpire = 60

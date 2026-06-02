@@ -291,6 +291,23 @@ func FindDevicesByUserID(userID uint) ([]model.LoginDevice, error) {
 	return devices, err
 }
 
+// FindLastDeviceByUserID 查找用户最近一次登录设备
+func FindLastDeviceByUserID(userID uint) (*model.LoginDevice, error) {
+	var device model.LoginDevice
+	err := database.DB.Where("user_id = ?", userID).
+		Order("last_active_at DESC").
+		First(&device).Error
+	return &device, err
+}
+
+// FindDeviceByUserIDAndDeviceID 通过用户ID和设备标识查找设备
+func FindDeviceByUserIDAndDeviceID(userID uint, deviceID string) (*model.LoginDevice, error) {
+	var device model.LoginDevice
+	err := database.DB.Where("user_id = ? AND device_id = ?", userID, deviceID).
+		First(&device).Error
+	return &device, err
+}
+
 // FindDeviceByID 查找设备
 func FindDeviceByID(deviceID uint) (*model.LoginDevice, error) {
 	var device model.LoginDevice
@@ -398,4 +415,9 @@ func FindOAuthUsersByUserID(userID uint) ([]model.OAuthUser, error) {
 func DeleteOAuthUser(userID uint, provider string) error {
 	return database.DB.Where("user_id = ? AND provider = ?", userID, provider).
 		Delete(&model.OAuthUser{}).Error
+}
+
+// UpdateOAuthUser 更新第三方登录绑定信息
+func UpdateOAuthUser(oauth *model.OAuthUser) error {
+	return database.DB.Save(oauth).Error
 }

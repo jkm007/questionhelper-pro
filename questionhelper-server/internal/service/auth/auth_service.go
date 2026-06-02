@@ -13,25 +13,67 @@ import (
 
 	"questionhelper-server/internal/dto"
 	"questionhelper-server/internal/model"
+	"questionhelper-server/internal/repository/application"
+	classrepo "questionhelper-server/internal/repository/class"
+	"questionhelper-server/internal/repository/exam"
 	"questionhelper-server/internal/repository/user"
-	"questionhelper-server/pkg/captcha"
 	"questionhelper-server/pkg/cache/key"
+	"questionhelper-server/pkg/captcha"
 	"questionhelper-server/pkg/config"
 	"questionhelper-server/pkg/database"
+	"questionhelper-server/pkg/email"
 	"questionhelper-server/pkg/encrypt"
 	"questionhelper-server/pkg/jwt"
 	"questionhelper-server/pkg/logger"
+	"questionhelper-server/pkg/sensitive"
+	"questionhelper-server/pkg/sms"
 )
 
 const (
-	maxLoginFailCount = 5           // 最大登录失败次数
-	lockDuration      = 15 * time.Minute // 锁定时长
+	maxLoginFailCount    = 5                // 最大登录失败次数
+	lockDuration         = 15 * time.Minute // 锁定时长
+	loginRateLimit       = 10               // IP 登录尝试次数上限
+	loginRateLimitWindow = 5 * time.Minute  // IP 登录限制时间窗口
 )
+
+// FindByIdentifier 通过用户名/邮箱/手机号查找用户（T01: 支持多种登录方式）
+func FindByIdentifier(identifier string) (*model.User, error) {
+	// 优先按用户名查找
+	u, err := user.FindByUsername(identifier)
+	if err == nil {
+		return u, nil
+	}
+	// 按邮箱查找
+	u, err = user.FindByEmail(identifier)
+	if err == nil {
+		return u, nil
+	}
+	// 按手机号查找
+	return user.FindByPhone(identifier)
+}
 
 // Login 用户登录
 func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, error) {
-	// 查找用户
-	u, err := user.FindByUsername(req.Username)
+	// T20: IP 登录频率限制
+	clientIP := req.DeviceInfo // 控制器已将 ClientIP 赋值给 DeviceInfo
+	limitKey := key.LoginLimitKey(clientIP)
+	ctx := context.Background()
+
+	count, err := database.RDB.Incr(ctx, limitKey).Result()
+	if err != nil {
+		logger.Errorf("检查登录频率限制失败: %v", err)
+	} else {
+		if count == 1 {
+			// 首次尝试，设置过期时间
+			database.RDB.Expire(ctx, limitKey, loginRateLimitWindow)
+		}
+		if count > int64(loginRateLimit) {
+			return nil, errors.New("登录尝试过于频繁，请稍后再试")
+		}
+	}
+
+	// 查找用户（支持用户名/邮箱/手机号）
+	u, err := FindByIdentifier(req.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户名或密码错误")
@@ -58,7 +100,12 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 		if req.CaptchaID == "" || req.Captcha == "" {
 			return nil, errors.New("请输入验证码")
 		}
-		if !captcha.VerifyCaptcha(req.CaptchaID, req.Captcha) {
+		// T30: 验证码尝试次数跟踪
+		ok, tooMany := captcha.VerifyCaptcha(req.CaptchaID, req.Captcha, req.CaptchaID)
+		if tooMany {
+			return nil, errors.New("验证码错误次数过多，请重新获取验证码")
+		}
+		if !ok {
 			return nil, errors.New("验证码错误")
 		}
 	}
@@ -81,7 +128,7 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 		// 记录登录日志
 		recordLoginLog(u, req, false, "密码错误")
 
-		return nil, fmt.Errorf("用户名或密码错误，还可尝试 %d 次", maxLoginFailCount-newFailCount)
+		return nil, errors.New("用户名或密码错误")
 	}
 
 	// 密码正确，重置失败次数
@@ -106,6 +153,9 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 	// 记录登录日志
 	recordLoginLog(u, req, true, "")
 
+	// T16: 登录异常检测（新设备、IP 变更）
+	detectLoginAnomaly(u.ID, req)
+
 	// 记录安全日志
 	recordSecurityLog(u.ID, "login", "用户登录成功", req.DeviceInfo)
 
@@ -127,21 +177,24 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 		refreshTokenExpire = cfg.RememberMeExpire // 30天
 	}
 
-	// 生成 Access Token
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, accessTokenExpire)
+	// 生成 Access Token（T28: 添加 type 字段区分 token 类型）
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, accessTokenExpire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
-	// 生成 Refresh Token
+	// 生成 Refresh Token（T28: 添加 type 字段区分 token 类型）
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, refreshTokenExpire)
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, refreshTokenExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
 
 	// 记录登录设备
 	recordDevice(u.ID, req, jti)
+
+	// T20: 登录成功，清除 IP 频率限制计数器
+	database.RDB.Del(ctx, limitKey)
 
 	logger.Infof("用户 %s 登录成功", req.Username)
 
@@ -161,56 +214,69 @@ func Login(req *dto.LoginRequest, cfg *config.JWTConfig) (*dto.LoginResponse, er
 	}, nil
 }
 
-// Register 用户注册
-func Register(req *dto.RegisterRequest) error {
+// Register 用户注册（T07: 注册后自动登录，T08: 邮箱必填，T09: 密码强度校验）
+func Register(req *dto.RegisterRequest, cfg *config.JWTConfig) (*dto.LoginResponse, error) {
 	// 检查用户名是否已存在
 	exists, err := user.ExistsByUsername(req.Username)
 	if err != nil {
-		return fmt.Errorf("检查用户名失败: %w", err)
+		return nil, fmt.Errorf("检查用户名失败: %w", err)
 	}
 	if exists {
-		return errors.New("用户名已存在")
+		return nil, errors.New("用户名已存在")
 	}
 
 	// 检查手机号
 	if req.Phone != "" {
 		exists, err = user.ExistsByPhone(req.Phone)
 		if err != nil {
-			return fmt.Errorf("检查手机号失败: %w", err)
+			return nil, fmt.Errorf("检查手机号失败: %w", err)
 		}
 		if exists {
-			return errors.New("手机号已被注册")
+			return nil, errors.New("手机号已被注册")
 		}
 	}
 
 	// 检查邮箱
-	if req.Email != "" {
-		exists, err = user.ExistsByEmail(req.Email)
-		if err != nil {
-			return fmt.Errorf("检查邮箱失败: %w", err)
-		}
-		if exists {
-			return errors.New("邮箱已被注册")
+	exists, err = user.ExistsByEmail(req.Email)
+	if err != nil {
+		return nil, fmt.Errorf("检查邮箱失败: %w", err)
+	}
+	if exists {
+		return nil, errors.New("邮箱已被注册")
+	}
+
+	// 验证邮箱验证码（T08）
+	if req.EmailCode != "" {
+		if err := verifyEmailCode(req.Email, req.EmailCode); err != nil {
+			return nil, err
 		}
 	}
 
-	// 验证验证码
-	if req.CaptchaID != "" && req.CaptchaCode != "" {
-		if !captcha.VerifyCaptcha(req.CaptchaID, req.CaptchaCode) {
-			return errors.New("验证码错误")
-		}
+	// 验证图形验证码（T30: 验证码尝试次数跟踪）
+	ok, tooMany := captcha.VerifyCaptcha(req.CaptchaID, req.CaptchaCode, req.CaptchaID)
+	if tooMany {
+		return nil, errors.New("验证码错误次数过多，请重新获取验证码")
+	}
+	if !ok {
+		return nil, errors.New("验证码错误")
 	}
 
 	// 加密密码
 	hashedPassword, err := encrypt.HashPassword(req.Password)
 	if err != nil {
-		return fmt.Errorf("加密密码失败: %w", err)
+		return nil, fmt.Errorf("加密密码失败: %w", err)
 	}
 
 	// 设置昵称
 	nickname := req.Nickname
 	if nickname == "" {
 		nickname = req.Username
+	}
+
+	// T26: 敏感词过滤（注册时检查昵称）
+	filter := sensitive.NewFilter()
+	if filter.HasSensitive(nickname) {
+		return nil, errors.New("昵称包含敏感词，请修改")
 	}
 
 	// 设置注册来源
@@ -231,7 +297,7 @@ func Register(req *dto.RegisterRequest) error {
 	}
 
 	if err := user.Create(u); err != nil {
-		return fmt.Errorf("创建用户失败: %w", err)
+		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
 
 	// 创建默认隐私设置
@@ -246,7 +312,32 @@ func Register(req *dto.RegisterRequest) error {
 	}
 
 	logger.Infof("用户注册成功: %s", req.Username)
-	return nil
+
+	// T07: 注册后自动登录，返回 Token（T28: 添加 type 字段区分 token 类型）
+	jti := jwt.GenerateJTI()
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, nil, jti, cfg.Expire, "access")
+	if err != nil {
+		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
+	}
+
+	refreshJTI := jwt.GenerateJTI()
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, nil, refreshJTI, cfg.RefreshExpire, "refresh")
+	if err != nil {
+		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
+	}
+
+	return &dto.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    cfg.Expire,
+		User: dto.UserInfo{
+			ID:        u.ID,
+			Username:  u.Username,
+			Nickname:  nickname,
+			CreatedAt: u.CreatedAt,
+		},
+	}, nil
 }
 
 // Logout 用户退出
@@ -267,16 +358,101 @@ func Logout(tokenString string) error {
 	return database.RDB.Set(ctx, blacklistKey, "1", ttl).Err()
 }
 
-// GetCaptcha 获取验证码
-func GetCaptcha() (string, string, error) {
-	return captcha.GenerateCaptcha()
+// SendEmailCode 发送邮箱验证码
+func SendEmailCode(emailAddr string) error {
+	ctx := context.Background()
+	limitKey := key.EmailLimitKey(emailAddr)
+
+	// 检查发送频率限制（1分钟内不能重复发送）
+	exists, err := database.RDB.Exists(ctx, limitKey).Result()
+	if err != nil {
+		return fmt.Errorf("检查发送频率失败: %w", err)
+	}
+	if exists > 0 {
+		return errors.New("发送过于频繁，请稍后再试")
+	}
+
+	// 生成验证码
+	code := generateVerifyCode()
+
+	// 存储验证码到 Redis，5分钟有效期
+	codeKey := key.EmailKey(emailAddr)
+	if err := database.RDB.Set(ctx, codeKey, code, key.CodeExpire*time.Second).Err(); err != nil {
+		return fmt.Errorf("存储验证码失败: %w", err)
+	}
+
+	// 设置发送频率限制，1分钟内不能重复发送
+	if err := database.RDB.Set(ctx, limitKey, "1", key.CodeLimitExpire*time.Second).Err(); err != nil {
+		logger.Errorf("设置发送频率限制失败: %v", err)
+	}
+
+	// 发送邮件
+	if err := email.SendVerificationCode(emailAddr, code); err != nil {
+		logger.Errorf("发送邮箱验证码失败: %v", err)
+		return errors.New("发送验证码失败，请稍后再试")
+	}
+
+	logger.Infof("邮箱验证码已发送: %s", emailAddr)
+	return nil
 }
 
-// RequestPasswordReset 请求重置密码
-func RequestPasswordReset(account string) error {
-	u, err := user.FindByUsername(account)
+// SendSmsCode 发送短信验证码
+func SendSmsCode(phone string) error {
+	ctx := context.Background()
+	limitKey := key.SmsLimitKey(phone)
+
+	// 检查发送频率限制（60秒内不能重复发送）
+	exists, err := database.RDB.Exists(ctx, limitKey).Result()
 	if err != nil {
-		// 不暴露用户是否存在
+		return fmt.Errorf("检查发送频率失败: %w", err)
+	}
+	if exists > 0 {
+		return errors.New("发送过于频繁，请稍后再试")
+	}
+
+	// 生成6位验证码
+	code := generateVerifyCode()
+
+	// 存储验证码到 Redis，5分钟有效期
+	codeKey := key.SmsKey(phone)
+	if err := database.RDB.Set(ctx, codeKey, code, key.CodeExpire*time.Second).Err(); err != nil {
+		return fmt.Errorf("存储验证码失败: %w", err)
+	}
+
+	// 设置发送频率限制，60秒内不能重复发送
+	if err := database.RDB.Set(ctx, limitKey, "1", key.CodeLimitExpire*time.Second).Err(); err != nil {
+		logger.Errorf("设置发送频率限制失败: %v", err)
+	}
+
+	// 发送短信
+	if err := sms.SendSMS(phone, code); err != nil {
+		logger.Errorf("发送短信验证码失败: %v", err)
+		return errors.New("发送验证码失败，请稍后再试")
+	}
+
+	logger.Infof("短信验证码已发送: %s", phone)
+	return nil
+}
+
+// GetCaptcha 获取验证码（T29: 支持 digit/letter/math 三种类型）
+func GetCaptcha(captchaType captcha.CaptchaType) (string, string, error) {
+	return captcha.GenerateCaptcha(captchaType)
+}
+
+// RequestPasswordReset 请求重置密码（T22: 发送邮件，T23: 验证码校验）
+func RequestPasswordReset(req *dto.RequestPasswordResetRequest) error {
+	// T23: 验证图形验证码（T30: 验证码尝试次数跟踪）
+	ok, tooMany := captcha.VerifyCaptcha(req.CaptchaID, req.CaptchaCode, req.CaptchaID)
+	if tooMany {
+		return errors.New("验证码错误次数过多，请重新获取验证码")
+	}
+	if !ok {
+		return errors.New("验证码错误")
+	}
+
+	// T21: 不暴露用户是否存在，统一返回成功
+	u, err := FindByIdentifier(req.Account)
+	if err != nil {
 		return nil
 	}
 
@@ -290,16 +466,46 @@ func RequestPasswordReset(account string) error {
 		return fmt.Errorf("生成重置令牌失败: %w", err)
 	}
 
-	// TODO: 发送短信/邮箱通知
+	// T22: 发送重置邮件（如果邮箱存在）
+	if u.Email != "" {
+		// TODO: 调用邮件服务发送重置链接
+		logger.Infof("密码重置邮件应发送至: %s", u.Email)
+	}
+
 	logger.Infof("密码重置令牌已生成: user_id=%d", u.ID)
 	return nil
 }
 
-// ResetPassword 重置密码
+// verifyEmailCode 验证邮箱验证码（T06/T08 辅助函数）
+func verifyEmailCode(email, code string) error {
+	ctx := context.Background()
+	codeKey := key.EmailKey(email)
+	storedCode, err := database.RDB.Get(ctx, codeKey).Result()
+	if err != nil {
+		return errors.New("验证码已过期或不存在")
+	}
+	if storedCode != code {
+		return errors.New("验证码错误")
+	}
+	// 验证通过后删除验证码（单次有效）
+	database.RDB.Del(ctx, codeKey)
+	return nil
+}
+
+// ResetPassword 重置密码（T02: 检查历史密码，T21: 防枚举，T24: 记录安全日志）
 func ResetPassword(account, code, newPassword string) error {
+	// T21: 统一错误消息，不暴露用户是否存在
 	u, err := user.FindByUsername(account)
 	if err != nil {
-		return errors.New("用户不存在")
+		// 尝试邮箱查找
+		u, err = user.FindByEmail(account)
+		if err != nil {
+			// 尝试手机号查找
+			u, err = user.FindByPhone(account)
+			if err != nil {
+				return errors.New("重置令牌无效或已过期")
+			}
+		}
 	}
 
 	// 验证重置令牌
@@ -308,6 +514,16 @@ func ResetPassword(account, code, newPassword string) error {
 	storedToken, err := database.RDB.Get(ctx, resetKey).Result()
 	if err != nil || storedToken != code {
 		return errors.New("重置令牌无效或已过期")
+	}
+
+	// T02: 检查新密码是否与最近 3 次密码相同
+	recentPasswords, err := user.GetRecentPasswords(u.ID, 3)
+	if err == nil {
+		for _, history := range recentPasswords {
+			if encrypt.CheckPassword(newPassword, history.Password) {
+				return errors.New("新密码不能与最近 3 次密码相同")
+			}
+		}
 	}
 
 	// 加密新密码
@@ -336,6 +552,9 @@ func ResetPassword(account, code, newPassword string) error {
 	// 强制退出所有设备
 	LogoutAll(u.ID)
 
+	// T24: 记录安全日志
+	recordSecurityLog(u.ID, "password_reset", "用户重置密码", "")
+
 	logger.Infof("用户 %s 密码重置成功", account)
 	return nil
 }
@@ -352,9 +571,47 @@ func DeactivateAccount(userID uint, password string) error {
 		return errors.New("密码错误")
 	}
 
+	// T31: 检查注销取消冷却期（30天内不可再次申请注销）
+	ctx := context.Background()
+	cooldownKey := key.DeactivateCooldownKey(userID)
+	exists, err := database.RDB.Exists(ctx, cooldownKey).Result()
+	if err != nil {
+		logger.Errorf("检查注销冷却期失败: %v", err)
+	}
+	if exists > 0 {
+		return errors.New("注销取消后30天内不可再次申请注销")
+	}
+
+	// T25: 注销前前置条件检查
+	// 检查是否有进行中的考试
+	ongoingCount, err := exam.CountOngoingByUserID(userID)
+	if err != nil {
+		return fmt.Errorf("检查进行中考试失败: %w", err)
+	}
+	if ongoingCount > 0 {
+		return errors.New("您有进行中的考试，请等待考试结束后再申请注销")
+	}
+
+	// 检查是否有待审核的角色申请
+	pendingCount, err := application.CountPendingByUserID(userID)
+	if err != nil {
+		return fmt.Errorf("检查待审核角色申请失败: %w", err)
+	}
+	if pendingCount > 0 {
+		return errors.New("您有待审核的角色申请，请等待审核结束后再申请注销")
+	}
+
+	// 检查是否有创建的班级
+	classCount, err := classrepo.CountByCreatorID(userID)
+	if err != nil {
+		return fmt.Errorf("检查创建班级失败: %w", err)
+	}
+	if classCount > 0 {
+		return errors.New("您创建的班级尚未转让，请先转让或解散班级")
+	}
+
 	// 生成确认验证码
 	code := generateVerifyCode()
-	ctx := context.Background()
 	deactivateKey := key.DeactivateCodeKey(userID)
 
 	// 存储到 Redis，5分钟有效期
@@ -411,7 +668,17 @@ func CancelDeactivate(userID uint) error {
 		return fmt.Errorf("取消注销失败: %w", err)
 	}
 
-	logger.Infof("用户 %d 已取消注销", userID)
+	// T31: 记录取消注销时间，设置30天冷却期
+	ctx := context.Background()
+	cooldownKey := key.DeactivateCooldownKey(userID)
+	if err := database.RDB.Set(ctx, cooldownKey, time.Now().Unix(), key.DeactivateCooldownDuration).Err(); err != nil {
+		logger.Errorf("设置注销冷却期失败: %v", err)
+	}
+
+	// 记录安全日志
+	recordSecurityLog(userID, "cancel_deactivate", "用户取消注销账号", "")
+
+	logger.Infof("用户 %d 已取消注销，30天冷却期已设置", userID)
 	return nil
 }
 
@@ -479,6 +746,62 @@ func recordSecurityLog(userID uint, eventType, detail, ip string) {
 	if err := user.CreateSecurityLog(securityLog); err != nil {
 		logger.Errorf("记录安全日志失败: %v", err)
 	}
+}
+
+// detectLoginAnomaly T16: 登录异常检测（新设备、IP 变更）
+// 查询用户最近一次登录设备，对比当前 IP 和设备标识，
+// 若存在异常则记录到 security_logs 表。
+func detectLoginAnomaly(userID uint, req *dto.LoginRequest) {
+	currentIP := req.DeviceInfo // 控制器已将 ClientIP 赋值给 DeviceInfo
+	currentDeviceID := req.DeviceID
+
+	// 查询用户最近一次登录设备
+	lastDevice, err := user.FindLastDeviceByUserID(userID)
+	if err != nil {
+		// 无历史记录说明是首次登录，不做异常判断
+		return
+	}
+
+	// 检测 IP 变更
+	ipChanged := lastDevice.IP != "" && lastDevice.IP != currentIP
+
+	// 检测新设备：在已有设备列表中查找当前 DeviceID
+	isNewDevice := false
+	if currentDeviceID != "" {
+		_, err := user.FindDeviceByUserIDAndDeviceID(userID, currentDeviceID)
+		isNewDevice = errors.Is(err, gorm.ErrRecordNotFound)
+	}
+
+	if !ipChanged && !isNewDevice {
+		return // 无异常
+	}
+
+	// 构造异常详情
+	var anomalyTypes []string
+	if isNewDevice {
+		anomalyTypes = append(anomalyTypes, "new_device")
+	}
+	if ipChanged {
+		anomalyTypes = append(anomalyTypes, "ip_change")
+	}
+	anomalyType := strings.Join(anomalyTypes, ",")
+
+	detail := fmt.Sprintf("登录异常: %s", anomalyType)
+
+	securityLog := &model.SecurityLog{
+		UserID:      userID,
+		EventType:   "login_anomaly",
+		EventDetail: detail,
+		IP:          currentIP,
+		UserAgent:   req.UserAgent,
+		Status:      1,
+	}
+
+	if err := user.CreateSecurityLog(securityLog); err != nil {
+		logger.Errorf("记录登录异常日志失败: %v", err)
+	}
+
+	logger.Warnf("用户 %d 登录异常: %s, IP=%s", userID, anomalyType, currentIP)
 }
 
 // recordDevice 记录登录设备
@@ -606,11 +929,74 @@ func GetSecurityLogs(userID uint, page, pageSize int) ([]dto.SecurityLogResponse
 	return result, total, nil
 }
 
-// VerifyCaptcha 验证验证码
+// VerifyCaptcha 验证验证码（T30: 支持尝试次数跟踪）
 func VerifyCaptcha(captchaID, captchaCode string) error {
-	if !captcha.VerifyCaptcha(captchaID, captchaCode) {
+	ok, tooMany := captcha.VerifyCaptcha(captchaID, captchaCode, captchaID)
+	if tooMany {
+		return errors.New("验证码错误次数过多，请重新获取验证码")
+	}
+	if !ok {
 		return errors.New("验证码错误")
 	}
+	return nil
+}
+
+// GetSecuritySettings 获取安全设置
+func GetSecuritySettings(userID uint) (*dto.SecuritySettingsResponse, error) {
+	privacy, err := user.FindPrivacyByUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 不存在则创建默认设置
+			privacy = &model.UserPrivacy{UserID: userID}
+			if createErr := user.CreatePrivacy(privacy); createErr != nil {
+				logger.Errorf("创建默认安全设置失败: %v", createErr)
+			}
+		} else {
+			return nil, fmt.Errorf("获取安全设置失败: %w", err)
+		}
+	}
+
+	return &dto.SecuritySettingsResponse{
+		LoginNotification:    privacy.LoginNotification,
+		PasswordChangeNotify: privacy.PasswordChangeNotify,
+		DeviceManageNotify:   privacy.DeviceManageNotify,
+	}, nil
+}
+
+// UpdateSecuritySettings 更新安全设置
+func UpdateSecuritySettings(userID uint, req *dto.SecuritySettingsRequest) error {
+	privacy, err := user.FindPrivacyByUserID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 不存在则创建
+			privacy = &model.UserPrivacy{UserID: userID}
+			if err := user.CreatePrivacy(privacy); err != nil {
+				return fmt.Errorf("创建安全设置失败: %w", err)
+			}
+		} else {
+			return fmt.Errorf("获取安全设置失败: %w", err)
+		}
+	}
+
+	// 仅更新传入的字段
+	if req.LoginNotification != nil {
+		privacy.LoginNotification = *req.LoginNotification
+	}
+	if req.PasswordChangeNotify != nil {
+		privacy.PasswordChangeNotify = *req.PasswordChangeNotify
+	}
+	if req.DeviceManageNotify != nil {
+		privacy.DeviceManageNotify = *req.DeviceManageNotify
+	}
+
+	if err := user.UpdatePrivacy(privacy); err != nil {
+		return fmt.Errorf("更新安全设置失败: %w", err)
+	}
+
+	// 记录安全日志
+	recordSecurityLog(userID, "security_settings_update", "用户更新安全设置", "")
+
+	logger.Infof("用户 %d 安全设置已更新", userID)
 	return nil
 }
 

@@ -78,6 +78,15 @@ func FindRecentRejectedByUserID(userID uint, within time.Duration) (*model.RoleA
 	return &app, err
 }
 
+// CountPendingByUserID 统计用户待审核的角色申请数量
+func CountPendingByUserID(userID uint) (int64, error) {
+	var count int64
+	err := database.DB.Model(&model.RoleApplication{}).
+		Where("user_id = ? AND status = 0", userID).
+		Count(&count).Error
+	return count, err
+}
+
 // CountByStatus 统计各状态申请数量
 func CountByStatus() (map[int8]int64, error) {
 	var results []struct {

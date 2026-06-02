@@ -21,6 +21,14 @@ func SetupAuthRoutes(r *gin.RouterGroup, ctrl *auth.AuthController) {
 		authGroup.POST("/email/send", ctrl.SendEmailCode)
 		authGroup.GET("/oauth/:provider/url", ctrl.GetOAuthURL)
 		authGroup.POST("/oauth/:provider", ctrl.OAuthLogin)
+		authGroup.GET("/oauth/:provider/callback", ctrl.OAuthCallback)
+
+		// 需要认证的认证相关接口
+		authGroupAuthed := authGroup.Group("")
+		authGroupAuthed.Use(middleware.AuthMiddleware())
+		{
+			authGroupAuthed.POST("/switch-role", ctrl.SwitchRole)
+		}
 	}
 }
 
@@ -45,6 +53,7 @@ func SetupUserAuthRoutes(r *gin.RouterGroup, ctrl *auth.AuthController) {
 		userGroup.GET("/security/logs", ctrl.GetSecurityLogs)
 
 		// 安全设置
+		userGroup.GET("/security/settings", ctrl.GetSecuritySettings)
 		userGroup.PUT("/security/settings", ctrl.UpdateSecuritySettings)
 
 		// 第三方账号

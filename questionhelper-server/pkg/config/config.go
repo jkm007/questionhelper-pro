@@ -20,6 +20,23 @@ type Config struct {
 	Limit   LimitConfig   `yaml:"limit"`
 	Log     LogConfig     `yaml:"log"`
 	OSS     OSSConfig     `yaml:"oss"`
+	Email   EmailConfig   `yaml:"email"`
+	SMS     SMSConfig     `yaml:"sms"`
+	OAuth   OAuthConfig   `yaml:"oauth"`
+}
+
+// OAuthConfig 第三方登录配置
+type OAuthConfig struct {
+	GitHub OAuthProvider `yaml:"github"`
+	Google OAuthProvider `yaml:"google"`
+	WeChat OAuthProvider `yaml:"wechat"`
+}
+
+// OAuthProvider 第三方登录提供商配置
+type OAuthProvider struct {
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	RedirectURI  string `yaml:"redirect_uri"`
 }
 
 type ServerConfig struct {
@@ -56,21 +73,21 @@ type AuthConfig struct {
 }
 
 type CaptchaConfig struct {
-	Type             string `yaml:"type"`               // captcha 类型: digit / letter / math
-	Length           int    `yaml:"length"`             // 验证码长度
-	Width            int    `yaml:"width"`              // 图片宽度
-	Height           int    `yaml:"height"`             // 图片高度
-	Expire           int    `yaml:"expire"`             // 有效期（秒）
-	MaxVerifyAttempts int   `yaml:"max_verify_attempts"` // 最大验证错误次数
+	Type              string `yaml:"type"`                // captcha 类型: digit / letter / math
+	Length            int    `yaml:"length"`              // 验证码长度
+	Width             int    `yaml:"width"`               // 图片宽度
+	Height            int    `yaml:"height"`              // 图片高度
+	Expire            int    `yaml:"expire"`              // 有效期（秒）
+	MaxVerifyAttempts int    `yaml:"max_verify_attempts"` // 最大验证错误次数
 }
 
 type LimitConfig struct {
-	LoginIPPerHour      int `yaml:"login_ip_per_hour"`      // 同一 IP 每小时最大登录次数
-	SMSPerMinute        int `yaml:"sms_per_minute"`         // 短信发送频率（次/分钟/手机）
-	SMSPerDay           int `yaml:"sms_per_day"`            // 每日短信发送上限
-	SMSIPPerHour        int `yaml:"sms_ip_per_hour"`        // 同一 IP 每小时最大发送次数
-	EmailPerMinute      int `yaml:"email_per_minute"`       // 邮箱发送频率（次/分钟/邮箱）
-	EmailPerDay         int `yaml:"email_per_day"`          // 每日邮箱发送上限
+	LoginIPPerHour       int `yaml:"login_ip_per_hour"`        // 同一 IP 每小时最大登录次数
+	SMSPerMinute         int `yaml:"sms_per_minute"`           // 短信发送频率（次/分钟/手机）
+	SMSPerDay            int `yaml:"sms_per_day"`              // 每日短信发送上限
+	SMSIPPerHour         int `yaml:"sms_ip_per_hour"`          // 同一 IP 每小时最大发送次数
+	EmailPerMinute       int `yaml:"email_per_minute"`         // 邮箱发送频率（次/分钟/邮箱）
+	EmailPerDay          int `yaml:"email_per_day"`            // 每日邮箱发送上限
 	RegisterPerIPPerHour int `yaml:"register_per_ip_per_hour"` // 同一 IP 每小时最大注册次数
 }
 
@@ -86,6 +103,24 @@ type OSSConfig struct {
 	SecretKey string `yaml:"secret_key"`
 	Bucket    string `yaml:"bucket"`
 	CDN       string `yaml:"cdn"`
+}
+
+type EmailConfig struct {
+	SMTPHost    string `yaml:"smtp_host"`
+	SMTPPort    int    `yaml:"smtp_port"`
+	Username    string `yaml:"username"`
+	Password    string `yaml:"password"`
+	FromAddress string `yaml:"from_address"`
+	FromName    string `yaml:"from_name"`
+	UseTLS      bool   `yaml:"use_tls"`
+}
+
+type SMSConfig struct {
+	Provider     string `yaml:"provider"`      // 短信服务商: aliyun / tencent / mock
+	AccessKey    string `yaml:"access_key"`    // AccessKey ID
+	AccessSecret string `yaml:"access_secret"` // AccessKey Secret
+	SignName     string `yaml:"sign_name"`     // 短信签名
+	TemplateCode string `yaml:"template_code"` // 短信模板 Code
 }
 
 func Load() (*Config, error) {
@@ -177,5 +212,21 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.Limit.RegisterPerIPPerHour == 0 {
 		cfg.Limit.RegisterPerIPPerHour = 10
+	}
+
+	// Email 默认值
+	if cfg.Email.SMTPHost == "" {
+		cfg.Email.SMTPHost = "smtp.qq.com"
+	}
+	if cfg.Email.SMTPPort == 0 {
+		cfg.Email.SMTPPort = 465
+	}
+	if cfg.Email.FromName == "" {
+		cfg.Email.FromName = "题小助"
+	}
+
+	// SMS 默认值
+	if cfg.SMS.Provider == "" {
+		cfg.SMS.Provider = "mock"
 	}
 }

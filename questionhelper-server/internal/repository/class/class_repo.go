@@ -72,6 +72,15 @@ func ListByUser(userID uint, req *dto.PageRequest) ([]model.Class, int64, error)
 	return classes, total, err
 }
 
+// CountByCreatorID 统计用户创建的班级数量
+func CountByCreatorID(userID uint) (int64, error) {
+	var count int64
+	err := database.DB.Model(&model.Class{}).
+		Where("creator_id = ?", userID).
+		Count(&count).Error
+	return count, err
+}
+
 // ==================== Homework ====================
 
 func FindHomework(id uint) (*model.Homework, error) {

@@ -73,13 +73,13 @@ type BatchRoleRequest struct {
 
 // AdminResetPasswordRequest 管理员重置密码请求
 type AdminResetPasswordRequest struct {
-	Password string `json:"password" binding:"required,min=6,max=20"`
+	Password string `json:"password" binding:"required,min=6,max=20,password"`
 }
 
 // CreateUserRequest 创建用户请求
 type CreateUserRequest struct {
 	Username string `json:"username" binding:"required,min=2,max=20"`
-	Password string `json:"password" binding:"required,min=6,max=20"`
+	Password string `json:"password" binding:"required,min=6,max=20,password"`
 	Nickname string `json:"nickname" binding:"omitempty,max=50"`
 	Phone    string `json:"phone" binding:"omitempty"`
 	Email    string `json:"email" binding:"omitempty,email"`

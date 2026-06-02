@@ -92,3 +92,12 @@ func GetAnswerRecords(recordID uint) ([]model.AnswerRecord, error) {
 func DeleteAnswerRecordsByRecordID(recordID uint) error {
 	return database.DB.Where("record_id = ?", recordID).Delete(&model.AnswerRecord{}).Error
 }
+
+// CountOngoingByUserID 统计用户进行中的考试记录数量
+func CountOngoingByUserID(userID uint) (int64, error) {
+	var count int64
+	err := database.DB.Model(&model.ExamRecord{}).
+		Where("user_id = ? AND status = 0", userID).
+		Count(&count).Error
+	return count, err
+}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"questionhelper-server/internal/dto"
+	"questionhelper-server/internal/model"
 	"questionhelper-server/internal/repository/user"
 	"questionhelper-server/pkg/cache/key"
 	"questionhelper-server/pkg/config"
@@ -53,15 +54,15 @@ func RefreshToken(req *dto.RefreshTokenRequest, cfg *config.JWTConfig) (*dto.Log
 		roleCodes = append(roleCodes, role.Code)
 	}
 
-	// 生成新 Token
+	// 生成新 Token（T28: 添加 type 字段区分 token 类型）
 	jti := jwt.GenerateJTI()
-	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, cfg.Expire)
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, jti, cfg.Expire, "access")
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
 	refreshJTI := jwt.GenerateJTI()
-	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, cfg.RefreshExpire)
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, roleIDs, refreshJTI, cfg.RefreshExpire, "refresh")
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -104,6 +105,91 @@ func LogoutAll(userID uint) error {
 
 	logger.Infof("用户 %d 已退出所有设备", userID)
 	return nil
+}
+
+// SwitchRole 切换角色并重新签发令牌
+func SwitchRole(userID uint, roleID uint, cfg *config.JWTConfig, currentToken string) (*dto.LoginResponse, error) {
+	// 获取用户信息
+	u, err := user.FindByID(userID)
+	if err != nil {
+		return nil, errors.New("用户不存在")
+	}
+
+	// 检查用户状态
+	if u.Status != 1 {
+		return nil, errors.New("账号已被禁用")
+	}
+
+	// 验证用户是否拥有该角色
+	var hasRole bool
+	for _, role := range u.Roles {
+		if role.ID == roleID {
+			hasRole = true
+			break
+		}
+	}
+	if !hasRole {
+		return nil, errors.New("无此角色权限")
+	}
+
+	// 将当前 Access Token 加入黑名单
+	claims, err := jwt.ParseToken(currentToken)
+	if err == nil && claims.JTI != "" {
+		ctx := context.Background()
+		blacklistKey := key.TokenBlacklistKey(claims.JTI)
+		ttl := time.Until(claims.ExpiresAt.Time)
+		if ttl > 0 {
+			database.RDB.Set(ctx, blacklistKey, "1", ttl)
+		}
+	}
+
+	// 生成新的 Token 对（仅包含切换后的角色，T28: 添加 type 字段区分 token 类型）
+	newRoleIDs := []uint{roleID}
+
+	jti := jwt.GenerateJTI()
+	accessToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, newRoleIDs, jti, cfg.Expire, "access")
+	if err != nil {
+		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
+	}
+
+	refreshJTI := jwt.GenerateJTI()
+	refreshToken, err := jwt.GenerateTokenWithJTI(u.ID, u.Username, newRoleIDs, refreshJTI, cfg.RefreshExpire, "refresh")
+	if err != nil {
+		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
+	}
+
+	// 查找切换到的角色信息
+	var switchedRole model.Role
+	for _, role := range u.Roles {
+		if role.ID == roleID {
+			switchedRole = role
+			break
+		}
+	}
+
+	logger.Infof("用户 %s 切换角色至 %s (ID: %d)", u.Username, switchedRole.Code, roleID)
+
+	return &dto.LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    cfg.Expire,
+		User: dto.UserInfo{
+			ID:       u.ID,
+			Username: u.Username,
+			Nickname: u.Nickname,
+			Avatar:   u.Avatar,
+			Roles: []dto.RoleInfo{
+				{
+					ID:          switchedRole.ID,
+					Name:        switchedRole.Name,
+					Code:        switchedRole.Code,
+					Description: switchedRole.Description,
+				},
+			},
+			CreatedAt: u.CreatedAt,
+		},
+	}, nil
 }
 
 // KickDevice 踢出设备

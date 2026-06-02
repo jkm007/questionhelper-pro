@@ -16,6 +16,7 @@ func init() {
 	validate = validator.New()
 	validate.RegisterValidation("phone", validatePhone)
 	validate.RegisterValidation("idcard", validateIDCard)
+	validate.RegisterValidation("password", validatePassword)
 }
 
 // ValidatePhone 手机号验证
@@ -30,6 +31,14 @@ func validateIDCard(fl validator.FieldLevel) bool {
 	idCard := fl.Field().String()
 	matched, _ := regexp.MatchString(`^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$`, idCard)
 	return matched
+}
+
+// validatePassword 密码强度验证：必须同时包含字母和数字
+func validatePassword(fl validator.FieldLevel) bool {
+	pwd := fl.Field().String()
+	hasLetter := regexp.MustCompile(`[a-zA-Z]`).MatchString(pwd)
+	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(pwd)
+	return hasLetter && hasNumber
 }
 
 // ValidateStruct 验证结构体
@@ -71,6 +80,8 @@ func formatError(err error) string {
 				return field + "格式不正确"
 			case "idcard":
 				return field + "格式不正确"
+			case "password":
+				return field + "必须包含字母和数字"
 			default:
 				return field + "验证失败: " + tag
 			}

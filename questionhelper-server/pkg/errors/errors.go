@@ -18,11 +18,12 @@ func New(code string, message string) *AppError {
 
 // 通用错误码
 var (
-	ErrParam       = New("A0001", "参数错误")
-	ErrUnauthorized = New("A0200", "未授权")
-	ErrForbidden   = New("A0301", "无权限")
-	ErrNotFound    = New("A0002", "资源不存在")
-	ErrInternal    = New("B0001", "系统内部错误")
+	ErrParam           = New("A0001", "参数错误")
+	ErrUnauthorized    = New("A0200", "未授权")
+	ErrForbidden       = New("A0301", "无权限")
+	ErrNotFound        = New("A0002", "资源不存在")
+	ErrInternal        = New("B0001", "系统内部错误")
+	ErrTooManyRequests = New("A0429", "请求过于频繁")
 )
 
 // 用户相关错误码
@@ -31,6 +32,12 @@ var (
 	ErrUserExists      = New("A0202", "用户已存在")
 	ErrPasswordWrong   = New("A0203", "密码错误")
 	ErrAccountDisabled = New("A0204", "账号已禁用")
+)
+
+// 验证码相关错误码
+var (
+	ErrCaptchaWrong   = New("A0205", "验证码错误")
+	ErrCaptchaExpired = New("A0206", "验证码已过期")
 )
 
 // Token 相关错误码
@@ -51,4 +58,9 @@ var (
 	ErrExamNotStarted   = New("A0502", "考试未开始")
 	ErrExamEnded        = New("A0503", "考试已结束")
 	ErrAlreadySubmitted = New("A0504", "已经提交过")
+)
+
+// 注销相关错误码
+var (
+	ErrDeactivateCooldown = New("A0207", "注销取消后30天内不可再次申请注销")
 )
