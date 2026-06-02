@@ -17,6 +17,17 @@ func NewPracticeController() *PracticeController {
 }
 
 // GetPracticeHistory 练习历史
+// @Summary      获取练习历史
+// @Description  分页获取当前用户的练习历史记录
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码"
+// @Param        page_size  query     int  false  "每页数量"
+// @Success      200  {object}  response.Response{data=dto.PracticeRecordInfo}  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetPracticeHistory(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -32,6 +43,15 @@ func (ctrl *PracticeController) GetPracticeHistory(c *gin.Context) {
 }
 
 // GetPracticeStats 练习统计
+// @Summary      获取练习统计
+// @Description  获取当前用户的练习统计数据
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/stats [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetPracticeStats(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -46,6 +66,17 @@ func (ctrl *PracticeController) GetPracticeStats(c *gin.Context) {
 // ==================== 模拟考试 ====================
 
 // GetMockExamHistory 模拟考试历史
+// @Summary      获取模拟考试历史
+// @Description  分页获取当前用户的模拟考试历史记录
+// @Tags         模拟考试
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码"
+// @Param        page_size  query     int  false  "每页数量"
+// @Success      200  {object}  response.Response{data=dto.MockExamHistoryItem}  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/mock/history [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetMockExamHistory(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -61,6 +92,17 @@ func (ctrl *PracticeController) GetMockExamHistory(c *gin.Context) {
 }
 
 // GetMockExamDetail 模拟考试详情
+// @Summary      获取模拟考试详情
+// @Description  根据ID获取模拟考试详细信息
+// @Tags         模拟考试
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "模拟考试ID"
+// @Success      200  {object}  response.Response{data=dto.MockExamResultInfo}  "成功"
+// @Failure      400  {object}  response.Response  "无效的模拟考试ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/mock/{id}/detail [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetMockExamDetail(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -80,6 +122,17 @@ func (ctrl *PracticeController) GetMockExamDetail(c *gin.Context) {
 // ==================== 练习计划 ====================
 
 // GetPlans 获取练习计划列表
+// @Summary      获取练习计划列表
+// @Description  分页获取当前用户的练习计划列表
+// @Tags         练习计划
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码"
+// @Param        page_size  query     int  false  "每页数量"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/plans [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetPlans(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -95,6 +148,17 @@ func (ctrl *PracticeController) GetPlans(c *gin.Context) {
 }
 
 // CreatePlan 创建练习计划
+// @Summary      创建练习计划
+// @Description  创建一个新的练习计划
+// @Tags         练习计划
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.CreatePlanRequest  true  "计划信息"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/plans [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) CreatePlan(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -113,6 +177,17 @@ func (ctrl *PracticeController) CreatePlan(c *gin.Context) {
 }
 
 // GetPlan 获取计划详情
+// @Summary      获取计划详情
+// @Description  根据ID获取练习计划详细信息
+// @Tags         练习计划
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "计划ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的计划ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/plans/{id} [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetPlan(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -130,6 +205,18 @@ func (ctrl *PracticeController) GetPlan(c *gin.Context) {
 }
 
 // UpdatePlan 更新计划
+// @Summary      更新练习计划
+// @Description  根据ID更新练习计划信息
+// @Tags         练习计划
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint                   true  "计划ID"
+// @Param        req  body      dto.UpdatePlanRequest   true  "更新信息"
+// @Success      200  {object}  response.Response  "更新成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/plans/{id} [put]
+// @Security     BearerAuth
 func (ctrl *PracticeController) UpdatePlan(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -152,6 +239,17 @@ func (ctrl *PracticeController) UpdatePlan(c *gin.Context) {
 }
 
 // DeletePlan 删除计划
+// @Summary      删除练习计划
+// @Description  根据ID删除练习计划
+// @Tags         练习计划
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "计划ID"
+// @Success      200  {object}  response.Response  "删除成功"
+// @Failure      400  {object}  response.Response  "无效的计划ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/plans/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *PracticeController) DeletePlan(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -168,6 +266,18 @@ func (ctrl *PracticeController) DeletePlan(c *gin.Context) {
 }
 
 // ExecutePlan 执行计划
+// @Summary      执行练习计划
+// @Description  根据ID执行练习计划
+// @Tags         练习计划
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint                    true  "计划ID"
+// @Param        req  body      dto.ExecutePlanRequest   true  "执行参数"
+// @Success      200  {object}  response.Response  "执行成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/plans/{id}/execute [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) ExecutePlan(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -192,6 +302,15 @@ func (ctrl *PracticeController) ExecutePlan(c *gin.Context) {
 // ==================== 每日练习 ====================
 
 // GetTodayPractice 获取今日练习
+// @Summary      获取今日练习
+// @Description  获取当前用户的今日练习信息
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/daily/today [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetTodayPractice(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -204,6 +323,17 @@ func (ctrl *PracticeController) GetTodayPractice(c *gin.Context) {
 }
 
 // CompleteDailyPractice 完成今日练习
+// @Summary      完成今日练习
+// @Description  标记今日练习为已完成
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.CompleteDailyRequest  true  "完成信息"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/daily/complete [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) CompleteDailyPractice(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -224,6 +354,16 @@ func (ctrl *PracticeController) CompleteDailyPractice(c *gin.Context) {
 // ==================== 练习打卡 ====================
 
 // Checkin 打卡
+// @Summary      练习打卡
+// @Description  用户进行练习打卡
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.CheckinRequest  true  "打卡信息"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/checkin [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) Checkin(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -239,6 +379,17 @@ func (ctrl *PracticeController) Checkin(c *gin.Context) {
 }
 
 // GetCheckinCalendar 打卡日历
+// @Summary      获取打卡日历
+// @Description  获取当前用户的打卡日历记录
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        req  query     dto.CheckinCalendarRequest  true  "查询参数"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/checkin/calendar [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetCheckinCalendar(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -259,6 +410,17 @@ func (ctrl *PracticeController) GetCheckinCalendar(c *gin.Context) {
 // ==================== 排行榜 ====================
 
 // GetLeaderboard 排行榜
+// @Summary      获取排行榜
+// @Description  获取练习排行榜数据
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        req  query     dto.LeaderboardRequest  true  "查询参数"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/leaderboard [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetLeaderboard(c *gin.Context) {
 	var req dto.LeaderboardRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -277,6 +439,15 @@ func (ctrl *PracticeController) GetLeaderboard(c *gin.Context) {
 // ==================== 闯关模式 ====================
 
 // GetChallengeLevels 关卡列表
+// @Summary      获取关卡列表
+// @Description  获取当前用户的闯关关卡列表
+// @Tags         闯关模式
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/challenge/levels [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetChallengeLevels(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -289,6 +460,17 @@ func (ctrl *PracticeController) GetChallengeLevels(c *gin.Context) {
 }
 
 // GetChallengeLevel 关卡详情
+// @Summary      获取关卡详情
+// @Description  根据ID获取闯关关卡详细信息
+// @Tags         闯关模式
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "关卡ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的关卡ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/challenge/levels/{id} [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetChallengeLevel(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -306,6 +488,15 @@ func (ctrl *PracticeController) GetChallengeLevel(c *gin.Context) {
 }
 
 // GetChallengeProgress 闯关进度
+// @Summary      获取闯关进度
+// @Description  获取当前用户的闯关进度信息
+// @Tags         闯关模式
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/challenge/progress [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetChallengeProgress(c *gin.Context) {
 	userID := c.GetUint("user_id")
 

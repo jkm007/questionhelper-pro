@@ -12,6 +12,18 @@ import (
 	"questionhelper-server/pkg/response"
 )
 
+// @Summary      切换角色
+// @Description  已认证用户切换当前角色并重新签发令牌
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.SwitchRoleRequest  true  "角色切换请求体"
+// @Success      200   {object}  response.Response  "切换成功"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      403   {object}  response.Response  "无权限切换该角色"
+// @Failure      404   {object}  response.Response  "用户不存在"
+// @Router       /auth/switch-role [post]
+// @Security     BearerAuth
 // SwitchRole 切换角色并重新签发令牌
 func (ac *AuthController) SwitchRole(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -50,6 +62,17 @@ func (ac *AuthController) SwitchRole(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// @Summary      刷新令牌
+// @Description  使用刷新令牌获取新的访问令牌
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.RefreshTokenRequest  true  "刷新令牌请求体"
+// @Success      200   {object}  response.Response  "刷新成功"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      401   {object}  response.Response  "令牌无效或已过期"
+// @Failure      403   {object}  response.Response  "账号被禁用"
+// @Router       /auth/refresh [post]
 // RefreshToken 刷新令牌
 func (ac *AuthController) RefreshToken(c *gin.Context) {
 	var req dto.RefreshTokenRequest

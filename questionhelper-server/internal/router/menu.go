@@ -9,13 +9,13 @@ func SetupMenuRoutes(r *gin.RouterGroup, ctrl *menu.MenuController) {
 	m := r.Group("/menu")
 	{
 		m.GET("/user", ctrl.GetUserMenus)
-		m.GET("/buttons", ctrl.GetUserButtons)
 	}
 
 	// 兼容前端 /menus/routes 接口
 	menus := r.Group("/menus")
 	{
 		menus.GET("/routes", ctrl.GetUserRoutes)
+		menus.GET("/buttons", ctrl.GetUserButtons)
 	}
 }
 

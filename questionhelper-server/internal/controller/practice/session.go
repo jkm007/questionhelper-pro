@@ -11,6 +11,17 @@ import (
 )
 
 // StartPractice 开始练习
+// @Summary      开始练习
+// @Description  创建一个新的练习会话
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.StartPracticeRequest  true  "练习配置"
+// @Success      200  {object}  response.Response{data=dto.PracticeSessionInfo}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/start [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) StartPractice(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -29,6 +40,18 @@ func (ctrl *PracticeController) StartPractice(c *gin.Context) {
 }
 
 // SubmitPractice 提交练习答案
+// @Summary      提交练习答案
+// @Description  提交练习会话的答案
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        session_id  query     uint                            true  "会话ID"
+// @Param        req         body      dto.SubmitPracticeAnswerRequest  true  "答案信息"
+// @Success      200  {object}  response.Response  "提交成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/submit [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) SubmitPractice(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -59,6 +82,17 @@ func (ctrl *PracticeController) SubmitPractice(c *gin.Context) {
 }
 
 // GetPracticeResult 获取练习结果
+// @Summary      获取练习结果
+// @Description  根据ID获取练习结果详情
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "练习ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的练习ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/{id} [get]
+// @Security     BearerAuth
 func (ctrl *PracticeController) GetPracticeResult(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -76,6 +110,17 @@ func (ctrl *PracticeController) GetPracticeResult(c *gin.Context) {
 }
 
 // FinishPractice 完成练习
+// @Summary      完成练习
+// @Description  根据ID完成练习会话
+// @Tags         练习管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "练习ID"
+// @Success      200  {object}  response.Response  "练习完成"
+// @Failure      400  {object}  response.Response  "无效的练习ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/{id}/finish [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) FinishPractice(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -91,6 +136,17 @@ func (ctrl *PracticeController) FinishPractice(c *gin.Context) {
 }
 
 // StartMockExam 开始模拟考试
+// @Summary      开始模拟考试
+// @Description  创建一个新的模拟考试会话
+// @Tags         模拟考试
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.StartMockExamRequest  true  "考试配置"
+// @Success      200  {object}  response.Response{data=dto.MockExamSessionInfo}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/mock/start [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) StartMockExam(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -109,6 +165,18 @@ func (ctrl *PracticeController) StartMockExam(c *gin.Context) {
 }
 
 // SubmitMockExam 提交模拟考试
+// @Summary      提交模拟考试
+// @Description  根据ID提交模拟考试答案
+// @Tags         模拟考试
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint                        true  "模拟考试ID"
+// @Param        req  body      dto.SubmitMockExamRequest    true  "考试答案"
+// @Success      200  {object}  response.Response{data=dto.MockExamResultInfo}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/mock/{id}/submit [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) SubmitMockExam(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -132,6 +200,17 @@ func (ctrl *PracticeController) SubmitMockExam(c *gin.Context) {
 }
 
 // StartChallenge 开始闯关
+// @Summary      开始闯关
+// @Description  根据关卡ID开始闯关挑战
+// @Tags         闯关模式
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "关卡ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的关卡ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/challenge/levels/{id}/start [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) StartChallenge(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -149,6 +228,18 @@ func (ctrl *PracticeController) StartChallenge(c *gin.Context) {
 }
 
 // SubmitChallenge 提交闯关
+// @Summary      提交闯关答案
+// @Description  根据关卡ID提交闯关挑战答案
+// @Tags         闯关模式
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint                          true  "关卡ID"
+// @Param        req  body      dto.SubmitChallengeRequest    true  "闯关答案"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /practice/challenge/levels/{id}/submit [post]
+// @Security     BearerAuth
 func (ctrl *PracticeController) SubmitChallenge(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)

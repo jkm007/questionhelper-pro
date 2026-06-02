@@ -22,6 +22,18 @@ func NewAuthController(jwtCfg *config.JWTConfig) *AuthController {
 	return &AuthController{jwtCfg: jwtCfg}
 }
 
+// @Summary      用户登录
+// @Description  用户通过用户名和密码登录，支持图形验证码验证
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.LoginRequest  true  "登录请求体"
+// @Success      200   {object}  response.Response  "成功"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      401   {object}  response.Response  "认证失败"
+// @Failure      403   {object}  response.Response  "账号被禁用"
+// @Failure      429   {object}  response.Response  "请求过于频繁"
+// @Router       /auth/login [post]
 // Login 用户登录
 func (ac *AuthController) Login(c *gin.Context) {
 	var req dto.LoginRequest
@@ -58,6 +70,16 @@ func (ac *AuthController) Login(c *gin.Context) {
 	response.Success(c, result)
 }
 
+// @Summary      用户注册
+// @Description  新用户注册，注册成功后自动登录并返回令牌
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.RegisterRequest  true  "注册请求体"
+// @Success      200   {object}  response.Response  "注册成功"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      409   {object}  response.Response  "用户已存在"
+// @Router       /auth/register [post]
 // Register 用户注册（T07: 注册后自动登录）
 func (ac *AuthController) Register(c *gin.Context) {
 	var req dto.RegisterRequest
@@ -88,6 +110,15 @@ func (ac *AuthController) Register(c *gin.Context) {
 	response.SuccessWithMessage(c, "注册成功", result)
 }
 
+// @Summary      用户退出
+// @Description  退出当前设备登录，清除刷新令牌
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "退出成功"
+// @Failure      500  {object}  response.Response  "退出失败"
+// @Router       /user/logout [post]
+// @Security     BearerAuth
 // Logout 用户退出
 func (ac *AuthController) Logout(c *gin.Context) {
 	token := c.GetHeader("Authorization")
@@ -106,6 +137,15 @@ func (ac *AuthController) Logout(c *gin.Context) {
 	response.SuccessWithMessage(c, "退出成功", nil)
 }
 
+// @Summary      退出所有设备
+// @Description  退出当前用户的所有已登录设备
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "已退出所有设备"
+// @Failure      500  {object}  response.Response  "退出失败"
+// @Router       /user/logout-all [post]
+// @Security     BearerAuth
 // LogoutAll 退出所有设备
 func (ac *AuthController) LogoutAll(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -121,6 +161,15 @@ func (ac *AuthController) LogoutAll(c *gin.Context) {
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }
 
+// @Summary      请求重置密码
+// @Description  通过用户名/手机号/邮箱申请重置密码，需提供图形验证码
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.RequestPasswordResetRequest  true  "重置密码请求体"
+// @Success      200   {object}  response.Response  "重置密码请求已提交"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Router       /auth/password/reset-request [post]
 // RequestPasswordReset 请求重置密码
 func (ac *AuthController) RequestPasswordReset(c *gin.Context) {
 	var req dto.RequestPasswordResetRequest
@@ -143,6 +192,15 @@ func (ac *AuthController) RequestPasswordReset(c *gin.Context) {
 	response.SuccessWithMessage(c, "重置密码请求已提交，请查看手机或邮箱", nil)
 }
 
+// @Summary      重置密码
+// @Description  通过验证码重置密码
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.ResetPasswordRequest  true  "重置密码请求体"
+// @Success      200   {object}  response.Response  "密码重置成功"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Router       /auth/password/reset [post]
 // ResetPassword 重置密码
 func (ac *AuthController) ResetPassword(c *gin.Context) {
 	var req dto.ResetPasswordRequest
@@ -159,6 +217,18 @@ func (ac *AuthController) ResetPassword(c *gin.Context) {
 	response.SuccessWithMessage(c, "密码重置成功", nil)
 }
 
+// @Summary      申请注销账号
+// @Description  已认证用户申请注销账号，需要验证密码
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.DeactivateRequest  true  "注销请求体"
+// @Success      200   {object}  response.Response  "验证码已发送"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      404   {object}  response.Response  "用户不存在"
+// @Failure      403   {object}  response.Response  "冷却期未过"
+// @Router       /user/account/deactivate [post]
+// @Security     BearerAuth
 // DeactivateAccount 申请注销账号
 func (ac *AuthController) DeactivateAccount(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -190,6 +260,16 @@ func (ac *AuthController) DeactivateAccount(c *gin.Context) {
 	})
 }
 
+// @Summary      确认注销
+// @Description  通过验证码确认注销账号，30天后将永久删除
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.DeactivateConfirmRequest  true  "确认注销请求体"
+// @Success      200   {object}  response.Response  "注销申请已提交"
+// @Failure      400   {object}  response.Response  "验证码错误或已过期"
+// @Router       /user/account/deactivate/confirm [post]
+// @Security     BearerAuth
 // ConfirmDeactivate 确认注销
 func (ac *AuthController) ConfirmDeactivate(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -211,6 +291,16 @@ func (ac *AuthController) ConfirmDeactivate(c *gin.Context) {
 	response.SuccessWithMessage(c, "注销申请已提交，30天后将永久删除账号", nil)
 }
 
+// @Summary      取消注销
+// @Description  取消已提交的账号注销申请
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "已取消注销"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      404  {object}  response.Response  "用户不存在"
+// @Router       /user/account/cancel-deactivate [post]
+// @Security     BearerAuth
 // CancelDeactivate 取消注销
 func (ac *AuthController) CancelDeactivate(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -228,6 +318,15 @@ func (ac *AuthController) CancelDeactivate(c *gin.Context) {
 	response.SuccessWithMessage(c, "已取消注销", nil)
 }
 
+// @Summary      导出个人数据
+// @Description  导出当前用户的个人数据（考试、练习、错题、收藏、评论等）
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "导出失败"
+// @Router       /user/account/export [get]
+// @Security     BearerAuth
 // ExportUserData 导出个人数据
 func (ac *AuthController) ExportUserData(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -241,6 +340,15 @@ func (ac *AuthController) ExportUserData(c *gin.Context) {
 	response.Success(c, data)
 }
 
+// @Summary      获取个人信息
+// @Description  获取当前登录用户的个人资料
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "获取失败"
+// @Router       /user/profile [get]
+// @Security     BearerAuth
 // GetProfile 获取个人信息
 func (ac *AuthController) GetProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -254,6 +362,15 @@ func (ac *AuthController) GetProfile(c *gin.Context) {
 	response.Success(c, user)
 }
 
+// @Summary      获取登录设备列表
+// @Description  获取当前用户的所有已登录设备信息
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "获取失败"
+// @Router       /user/devices [get]
+// @Security     BearerAuth
 // GetUserDevices 获取登录设备列表
 func (ac *AuthController) GetUserDevices(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -267,6 +384,16 @@ func (ac *AuthController) GetUserDevices(c *gin.Context) {
 	response.Success(c, gin.H{"devices": devices})
 }
 
+// @Summary      踢出设备
+// @Description  将指定设备踢出登录
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Param        id   path      int  true  "设备ID"
+// @Success      200  {object}  response.Response  "设备已退出"
+// @Failure      400  {object}  response.Response  "设备ID无效或操作失败"
+// @Router       /user/devices/{id} [delete]
+// @Security     BearerAuth
 // KickDevice 踢出设备
 func (ac *AuthController) KickDevice(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -285,6 +412,15 @@ func (ac *AuthController) KickDevice(c *gin.Context) {
 	response.SuccessWithMessage(c, "设备已退出", nil)
 }
 
+// @Summary      踢出所有设备
+// @Description  将当前用户的所有设备踢出登录
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "已退出所有设备"
+// @Failure      500  {object}  response.Response  "操作失败"
+// @Router       /user/devices [delete]
+// @Security     BearerAuth
 // KickAllDevices 踢出所有设备
 func (ac *AuthController) KickAllDevices(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -300,6 +436,17 @@ func (ac *AuthController) KickAllDevices(c *gin.Context) {
 	response.SuccessWithMessage(c, "已退出所有设备", nil)
 }
 
+// @Summary      获取安全日志
+// @Description  分页获取当前用户的安全操作日志
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Param        page      query  int  false  "页码"       default(1)
+// @Param        pageSize  query  int  false  "每页数量"   default(10)
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "获取失败"
+// @Router       /user/security/logs [get]
+// @Security     BearerAuth
 // GetSecurityLogs 获取安全日志
 func (ac *AuthController) GetSecurityLogs(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -320,6 +467,17 @@ func (ac *AuthController) GetSecurityLogs(c *gin.Context) {
 	})
 }
 
+// @Summary      修改密码
+// @Description  已认证用户修改登录密码，需要验证旧密码
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.ChangePasswordRequest  true  "修改密码请求体"
+// @Success      200   {object}  response.Response  "密码修改成功"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      404   {object}  response.Response  "用户不存在"
+// @Router       /user/password [put]
+// @Security     BearerAuth
 // ChangePassword 修改密码
 func (ac *AuthController) ChangePassword(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -346,6 +504,15 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 	response.SuccessWithMessage(c, "密码修改成功", nil)
 }
 
+// @Summary      获取安全设置
+// @Description  获取当前用户的安全通知设置
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "获取失败"
+// @Router       /user/security/settings [get]
+// @Security     BearerAuth
 // GetSecuritySettings 获取安全设置
 func (ac *AuthController) GetSecuritySettings(c *gin.Context) {
 	userID := c.GetUint("user_id")
@@ -359,6 +526,16 @@ func (ac *AuthController) GetSecuritySettings(c *gin.Context) {
 	response.Success(c, settings)
 }
 
+// @Summary      更新安全设置
+// @Description  更新当前用户的安全通知设置
+// @Tags         用户认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      dto.SecuritySettingsRequest  true  "安全设置请求体"
+// @Success      200   {object}  response.Response  "安全设置已更新"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Router       /user/security/settings [put]
+// @Security     BearerAuth
 // UpdateSecuritySettings 更新安全设置
 func (ac *AuthController) UpdateSecuritySettings(c *gin.Context) {
 	userID := c.GetUint("user_id")

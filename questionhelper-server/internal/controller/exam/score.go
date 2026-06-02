@@ -11,6 +11,18 @@ import (
 )
 
 // ListScores 成绩列表
+// @Summary      获取成绩列表
+// @Description  获取成绩列表，支持按考试筛选和分页（管理员）
+// @Tags         成绩管理
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码"
+// @Param        page_size  query     int  false  "每页数量"
+// @Param        exam_id    query     uint false  "考试ID"
+// @Success      200  {object}  response.PageResponse{data=[]dto.ScoreInfo}  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/scores [get]
+// @Security     BearerAuth
 func (ctrl *ExamController) ListScores(c *gin.Context) {
 	var req dto.PageRequest
 	c.ShouldBindQuery(&req)
@@ -33,6 +45,17 @@ func (ctrl *ExamController) ListScores(c *gin.Context) {
 }
 
 // GetScore 获取成绩详情
+// @Summary      获取成绩详情
+// @Description  根据记录ID获取成绩详细信息（管理员）
+// @Tags         成绩管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "成绩记录ID"
+// @Success      200  {object}  response.Response{data=dto.ScoreInfo}  "成功"
+// @Failure      400  {object}  response.Response  "无效的记录ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/scores/{id} [get]
+// @Security     BearerAuth
 func (ctrl *ExamController) GetScore(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -49,6 +72,17 @@ func (ctrl *ExamController) GetScore(c *gin.Context) {
 }
 
 // GetScoreAnalysis 成绩分析
+// @Summary      获取成绩分析
+// @Description  获取指定考试的成绩分析数据（管理员）
+// @Tags         成绩管理
+// @Accept       json
+// @Produce      json
+// @Param        exam_id  query     uint  true  "考试ID"
+// @Success      200  {object}  response.Response{data=dto.ScoreAnalysisInfo}  "成功"
+// @Failure      400  {object}  response.Response  "请输入考试ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/scores/analysis [get]
+// @Security     BearerAuth
 func (ctrl *ExamController) GetScoreAnalysis(c *gin.Context) {
 	examIDStr := c.Query("exam_id")
 	if examIDStr == "" {

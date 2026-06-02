@@ -11,6 +11,15 @@ import (
 	"questionhelper-server/pkg/response"
 )
 
+// @Summary      获取验证码
+// @Description  获取图形验证码，支持 digit/letter/math 三种类型
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        type  query     string  false  "验证码类型(digit/letter/math)"  default(digit)
+// @Success      200   {object}  response.Response  "成功"
+// @Failure      500   {object}  response.Response  "生成验证码失败"
+// @Router       /auth/captcha [get]
 // GetCaptcha 获取验证码（T29: 支持 digit/letter/math 三种类型，通过 query 参数 type 指定）
 func (ac *AuthController) GetCaptcha(c *gin.Context) {
 	captchaType := captcha.CaptchaType(c.DefaultQuery("type", string(captcha.CaptchaTypeDigit)))
@@ -34,6 +43,15 @@ func (ac *AuthController) GetCaptcha(c *gin.Context) {
 	})
 }
 
+// @Summary      验证验证码
+// @Description  验证用户输入的图形验证码是否正确
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      object  true  "验证码验证请求体"  Schema({"captchaId":"string","captchaCode":"string"})
+// @Success      200   {object}  response.Response  "验证码正确"
+// @Failure      400   {object}  response.Response  "参数错误或验证码错误"
+// @Router       /auth/captcha/verify [post]
 // VerifyCaptcha 验证验证码
 func (ac *AuthController) VerifyCaptcha(c *gin.Context) {
 	var req struct {
@@ -53,6 +71,16 @@ func (ac *AuthController) VerifyCaptcha(c *gin.Context) {
 	response.SuccessWithMessage(c, "验证码正确", nil)
 }
 
+// @Summary      发送短信验证码
+// @Description  向指定手机号发送短信验证码，可选图形验证码校验
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      object  true  "短信验证码请求体"  Schema({"phone":"string","captchaId":"string","captchaCode":"string"})
+// @Success      200   {object}  response.Response  "短信验证码已发送"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      500   {object}  response.Response  "发送失败"
+// @Router       /auth/sms/send [post]
 // SendSmsCode 发送短信验证码
 func (ac *AuthController) SendSmsCode(c *gin.Context) {
 	var req struct {
@@ -81,6 +109,16 @@ func (ac *AuthController) SendSmsCode(c *gin.Context) {
 	response.SuccessWithMessage(c, "短信验证码已发送", nil)
 }
 
+// @Summary      发送邮箱验证码
+// @Description  向指定邮箱发送验证码，可选图形验证码校验
+// @Tags         认证
+// @Accept       json
+// @Produce      json
+// @Param        data  body      object  true  "邮箱验证码请求体"  Schema({"email":"string","captchaId":"string","captchaCode":"string"})
+// @Success      200   {object}  response.Response  "邮箱验证码已发送"
+// @Failure      400   {object}  response.Response  "参数错误"
+// @Failure      500   {object}  response.Response  "发送失败"
+// @Router       /auth/email/send [post]
 // SendEmailCode 发送邮箱验证码
 func (ac *AuthController) SendEmailCode(c *gin.Context) {
 	var req struct {

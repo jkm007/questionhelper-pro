@@ -16,6 +16,17 @@ func NewBatchController() *BatchController {
 }
 
 // BatchPublish 批量发布
+// @Summary      批量发布题目
+// @Description  管理员批量发布多个题目
+// @Tags         题目管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.BatchQuestionRequest  true  "题目ID列表"
+// @Success      200  {object}  response.Response{data=dto.BatchResult}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/questions/batch/publish [post]
+// @Security     BearerAuth
 func (ctrl *BatchController) BatchPublish(c *gin.Context) {
 	var req dto.BatchQuestionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -32,6 +43,17 @@ func (ctrl *BatchController) BatchPublish(c *gin.Context) {
 }
 
 // BatchArchive 批量归档
+// @Summary      批量归档题目
+// @Description  管理员批量归档多个题目
+// @Tags         题目管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.BatchQuestionRequest  true  "题目ID列表"
+// @Success      200  {object}  response.Response{data=dto.BatchResult}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/questions/batch/archive [post]
+// @Security     BearerAuth
 func (ctrl *BatchController) BatchArchive(c *gin.Context) {
 	var req dto.BatchQuestionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,6 +70,17 @@ func (ctrl *BatchController) BatchArchive(c *gin.Context) {
 }
 
 // BatchDelete 批量删除
+// @Summary      批量删除题目
+// @Description  管理员批量删除多个题目
+// @Tags         题目管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.BatchQuestionRequest  true  "题目ID列表"
+// @Success      200  {object}  response.Response{data=dto.BatchResult}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/questions/batch/delete [post]
+// @Security     BearerAuth
 func (ctrl *BatchController) BatchDelete(c *gin.Context) {
 	var req dto.BatchQuestionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,6 +97,17 @@ func (ctrl *BatchController) BatchDelete(c *gin.Context) {
 }
 
 // BatchMoveCategory 批量移动分类
+// @Summary      批量移动题目分类
+// @Description  管理员批量将题目移动到指定分类
+// @Tags         题目管理
+// @Accept       json
+// @Produce      json
+// @Param        req  body      dto.BatchMoveRequest  true  "题目ID列表和目标分类"
+// @Success      200  {object}  response.Response{data=dto.BatchResult}  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/questions/batch/move [post]
+// @Security     BearerAuth
 func (ctrl *BatchController) BatchMoveCategory(c *gin.Context) {
 	var req dto.BatchMoveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

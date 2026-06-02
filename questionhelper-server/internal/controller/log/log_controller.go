@@ -18,6 +18,18 @@ func NewLogController() *LogController {
 }
 
 // ListOperationLogs 操作日志列表
+// @Summary      获取操作日志列表
+// @Description  获取操作日志列表，支持分页和条件筛选
+// @Tags         操作日志
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码"
+// @Param        page_size  query     int  false  "每页数量"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/operation-logs [get]
+// @Security     BearerAuth
 func (ctrl *LogController) ListOperationLogs(c *gin.Context) {
 	var req dto.OperationLogListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -34,6 +46,17 @@ func (ctrl *LogController) ListOperationLogs(c *gin.Context) {
 }
 
 // GetOperationLog 获取操作日志详情
+// @Summary      获取操作日志详情
+// @Description  根据ID获取操作日志详情
+// @Tags         操作日志
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "日志ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的日志ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/operation-logs/{id} [get]
+// @Security     BearerAuth
 func (ctrl *LogController) GetOperationLog(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -50,6 +73,18 @@ func (ctrl *LogController) GetOperationLog(c *gin.Context) {
 }
 
 // ExportOperationLogs 导出操作日志
+// @Summary      导出操作日志
+// @Description  根据条件导出操作日志为CSV文件
+// @Tags         操作日志
+// @Accept       json
+// @Produce      text/csv
+// @Param        start_time  query     string  false  "开始时间"
+// @Param        end_time    query     string  false  "结束时间"
+// @Success      200  {string}  string  "CSV文件内容"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/operation-logs/export [get]
+// @Security     BearerAuth
 func (ctrl *LogController) ExportOperationLogs(c *gin.Context) {
 	var req dto.OperationLogListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -70,6 +105,18 @@ func (ctrl *LogController) ExportOperationLogs(c *gin.Context) {
 }
 
 // ListLoginLogs 登录日志列表
+// @Summary      获取登录日志列表
+// @Description  获取登录日志列表，支持分页和条件筛选
+// @Tags         登录日志
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码"
+// @Param        page_size  query     int  false  "每页数量"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/login-logs [get]
+// @Security     BearerAuth
 func (ctrl *LogController) ListLoginLogs(c *gin.Context) {
 	var req dto.LoginLogListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -86,6 +133,18 @@ func (ctrl *LogController) ListLoginLogs(c *gin.Context) {
 }
 
 // ExportLoginLogs 导出登录日志
+// @Summary      导出登录日志
+// @Description  根据条件导出登录日志为CSV文件
+// @Tags         登录日志
+// @Accept       json
+// @Produce      text/csv
+// @Param        start_time  query     string  false  "开始时间"
+// @Param        end_time    query     string  false  "结束时间"
+// @Success      200  {string}  string  "CSV文件内容"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/login-logs/export [get]
+// @Security     BearerAuth
 func (ctrl *LogController) ExportLoginLogs(c *gin.Context) {
 	var req dto.LoginLogListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -106,6 +165,16 @@ func (ctrl *LogController) ExportLoginLogs(c *gin.Context) {
 }
 
 // CleanOperationLogs 清理操作日志
+// @Summary      清理操作日志
+// @Description  清理指定天数之前的旧操作日志
+// @Tags         操作日志
+// @Accept       json
+// @Produce      json
+// @Param        days  query     int  false  "保留天数"  default(90)
+// @Success      200  {object}  response.Response  "清理成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/operation-logs/clean [post]
+// @Security     BearerAuth
 func (ctrl *LogController) CleanOperationLogs(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "90"))
 
@@ -118,6 +187,16 @@ func (ctrl *LogController) CleanOperationLogs(c *gin.Context) {
 }
 
 // CleanLoginLogs 清理登录日志
+// @Summary      清理登录日志
+// @Description  清理指定天数之前的旧登录日志
+// @Tags         登录日志
+// @Accept       json
+// @Produce      json
+// @Param        days  query     int  false  "保留天数"  default(90)
+// @Success      200  {object}  response.Response  "清理成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/login-logs/clean [post]
+// @Security     BearerAuth
 func (ctrl *LogController) CleanLoginLogs(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "90"))
 

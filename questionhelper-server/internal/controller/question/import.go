@@ -11,6 +11,19 @@ import (
 )
 
 // ImportQuestions 导入题目
+// @Summary      导入题目
+// @Description  管理员通过文件批量导入题目
+// @Tags         题目管理
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file         formData  file    true   "题目文件"
+// @Param        category_id  formData  uint    true   "分类ID"
+// @Param        visibility   formData  int     true   "可见性(1=公开 2=私有 3=班级)"
+// @Success      200  {object}  response.Response{data=object{count=int}}  "导入成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /admin/questions/import [post]
+// @Security     BearerAuth
 func (ctrl *QuestionController) ImportQuestions(c *gin.Context) {
 	creatorID := c.GetUint("user_id")
 

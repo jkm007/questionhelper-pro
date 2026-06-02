@@ -17,6 +17,18 @@ func NewAnswerController() *AnswerController {
 }
 
 // SaveAnswer 保存答案
+// @Summary      保存单个答案
+// @Description  保存学生对单个题目的作答
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        recordId  path      uint                   true  "考试记录ID"
+// @Param        req       body      dto.SaveAnswerRequest  true  "答案信息"
+// @Success      200  {object}  response.Response  "保存成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam-records/{recordId}/save-answer [post]
+// @Security     BearerAuth
 func (ctrl *AnswerController) SaveAnswer(c *gin.Context) {
 	recordID, err := strconv.ParseUint(c.Param("recordId"), 10, 32)
 	if err != nil {
@@ -38,6 +50,18 @@ func (ctrl *AnswerController) SaveAnswer(c *gin.Context) {
 }
 
 // SaveAnswers 批量保存答案
+// @Summary      批量保存答案
+// @Description  批量保存学生对多个题目的作答
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        recordId  path      uint                        true  "考试记录ID"
+// @Param        req       body      dto.SaveAnswerBatchRequest  true  "批量答案信息"
+// @Success      200  {object}  response.Response  "保存成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam-records/{recordId}/save-answers [post]
+// @Security     BearerAuth
 func (ctrl *AnswerController) SaveAnswers(c *gin.Context) {
 	recordID, err := strconv.ParseUint(c.Param("recordId"), 10, 32)
 	if err != nil {
@@ -59,6 +83,17 @@ func (ctrl *AnswerController) SaveAnswers(c *gin.Context) {
 }
 
 // GetStandardAnswers 获取标准答案
+// @Summary      获取标准答案
+// @Description  获取指定考试的标准答案
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "考试ID"
+// @Success      200  {object}  response.Response{data=[]dto.StandardAnswerInfo}  "成功"
+// @Failure      400  {object}  response.Response  "无效的考试ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam/{id}/standard-answers [get]
+// @Security     BearerAuth
 func (ctrl *AnswerController) GetStandardAnswers(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -77,6 +112,18 @@ func (ctrl *AnswerController) GetStandardAnswers(c *gin.Context) {
 }
 
 // MarkQuestion 标记题目
+// @Summary      标记题目
+// @Description  标记或取消标记考试中的题目
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        recordId  path      uint                      true  "考试记录ID"
+// @Param        req       body      dto.MarkQuestionRequest   true  "标记信息"
+// @Success      200  {object}  response.Response  "操作成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam-records/{recordId}/mark [post]
+// @Security     BearerAuth
 func (ctrl *AnswerController) MarkQuestion(c *gin.Context) {
 	recordID, err := strconv.ParseUint(c.Param("recordId"), 10, 32)
 	if err != nil {
@@ -98,6 +145,17 @@ func (ctrl *AnswerController) MarkQuestion(c *gin.Context) {
 }
 
 // GetMarkedQuestions 获取标记题目
+// @Summary      获取标记题目列表
+// @Description  获取学生在考试中标记的题目列表
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        recordId  path      uint  true  "考试记录ID"
+// @Success      200  {object}  response.Response{data=[]dto.MarkedQuestionInfo}  "成功"
+// @Failure      400  {object}  response.Response  "无效的考试记录ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam-records/{recordId}/marked [get]
+// @Security     BearerAuth
 func (ctrl *AnswerController) GetMarkedQuestions(c *gin.Context) {
 	recordID, err := strconv.ParseUint(c.Param("recordId"), 10, 32)
 	if err != nil {
@@ -114,6 +172,17 @@ func (ctrl *AnswerController) GetMarkedQuestions(c *gin.Context) {
 }
 
 // GetExamGuide 获取答题指引
+// @Summary      获取答题指引
+// @Description  获取指定考试的答题指引信息
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint  true  "考试ID"
+// @Success      200  {object}  response.Response{data=dto.ExamGuideInfo}  "成功"
+// @Failure      400  {object}  response.Response  "无效的考试ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam/{id}/guide [get]
+// @Security     BearerAuth
 func (ctrl *AnswerController) GetExamGuide(c *gin.Context) {
 	examID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -130,6 +199,18 @@ func (ctrl *AnswerController) GetExamGuide(c *gin.Context) {
 }
 
 // SubmitFeedback 提交考后反馈
+// @Summary      提交考后反馈
+// @Description  学生提交考试后的反馈信息
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint                  true  "考试ID"
+// @Param        req  body      dto.FeedbackRequest   true  "反馈信息"
+// @Success      200  {object}  response.Response  "反馈提交成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam/{id}/feedback [post]
+// @Security     BearerAuth
 func (ctrl *AnswerController) SubmitFeedback(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -153,6 +234,18 @@ func (ctrl *AnswerController) SubmitFeedback(c *gin.Context) {
 }
 
 // ReportWarning 上报异常行为
+// @Summary      上报异常行为
+// @Description  上报学生在考试中的异常行为（如切屏、多设备登录等）
+// @Tags         答案管理
+// @Accept       json
+// @Produce      json
+// @Param        recordId  path      uint                          true  "考试记录ID"
+// @Param        req       body      object{type=string,detail=string}  true  "异常信息"
+// @Success      200  {object}  response.Response  "上报成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /exam-records/{recordId}/warning [post]
+// @Security     BearerAuth
 func (ctrl *AnswerController) ReportWarning(c *gin.Context) {
 	userID := c.GetUint("user_id")
 

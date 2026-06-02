@@ -19,6 +19,17 @@ func NewFileController() *FileController {
 // ==================== Upload ====================
 
 // UploadFile 上传文件
+// @Summary      上传文件
+// @Description  上传单个文件
+// @Tags         文件管理
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file  formData  file  true  "文件"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "请选择文件"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /files [post]
+// @Security     BearerAuth
 func (ctrl *FileController) UploadFile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -45,6 +56,17 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 }
 
 // UploadImage 上传图片（压缩+缩略图）
+// @Summary      上传图片
+// @Description  上传图片文件，自动压缩和生成缩略图
+// @Tags         文件管理
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file  formData  file  true  "图片文件"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "请选择图片文件"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/upload/image [post]
+// @Security     BearerAuth
 func (ctrl *FileController) UploadImage(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -65,6 +87,17 @@ func (ctrl *FileController) UploadImage(c *gin.Context) {
 }
 
 // BatchUpload 批量文件上传
+// @Summary      批量上传文件
+// @Description  批量上传多个文件
+// @Tags         文件管理
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        files  formData  file  true  "文件列表"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "请选择文件"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/upload/batch [post]
+// @Security     BearerAuth
 func (ctrl *FileController) BatchUpload(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -87,6 +120,17 @@ func (ctrl *FileController) BatchUpload(c *gin.Context) {
 // ==================== Download ====================
 
 // DownloadFile 文件下载
+// @Summary      下载文件
+// @Description  根据文件ID下载文件
+// @Tags         文件管理
+// @Accept       json
+// @Produce      application/octet-stream
+// @Param        id  path      uint  true  "文件ID"
+// @Success      200  {string}  string  "文件内容"
+// @Failure      400  {object}  response.Response  "无效的文件ID"
+// @Failure      404  {object}  response.Response  "文件未找到"
+// @Router       /file/{id}/download [get]
+// @Security     BearerAuth
 func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -112,6 +156,18 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 // ==================== Thumbnail ====================
 
 // GetThumbnail 获取缩略图
+// @Summary      获取缩略图
+// @Description  根据文件ID和尺寸获取缩略图
+// @Tags         文件管理
+// @Accept       json
+// @Produce      image/*
+// @Param        id    path      uint    true  "文件ID"
+// @Param        size  path      string  true  "缩略图尺寸"
+// @Success      200  {string}  string  "缩略图内容"
+// @Failure      400  {object}  response.Response  "无效的文件ID"
+// @Failure      404  {object}  response.Response  "缩略图未找到"
+// @Router       /file/{id}/thumbnail/{size} [get]
+// @Security     BearerAuth
 func (ctrl *FileController) GetThumbnail(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -138,6 +194,18 @@ func (ctrl *FileController) GetThumbnail(c *gin.Context) {
 // ==================== File Reference ====================
 
 // AddReference 添加文件引用
+// @Summary      添加文件引用
+// @Description  为文件添加引用关联
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      uint                      true  "文件ID"
+// @Param        req  body      dto.AddReferenceRequest   true  "引用数据"
+// @Success      200  {object}  response.Response  "添加引用成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/{id}/reference [post]
+// @Security     BearerAuth
 func (ctrl *FileController) AddReference(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -160,6 +228,17 @@ func (ctrl *FileController) AddReference(c *gin.Context) {
 }
 
 // GetReferences 获取文件引用列表
+// @Summary      获取文件引用列表
+// @Description  获取指定文件的引用列表
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "文件ID"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "无效的文件ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/{id}/references [get]
+// @Security     BearerAuth
 func (ctrl *FileController) GetReferences(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -176,6 +255,18 @@ func (ctrl *FileController) GetReferences(c *gin.Context) {
 }
 
 // DeleteReference 删除文件引用
+// @Summary      删除文件引用
+// @Description  删除指定文件的引用关联
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        id     path      uint  true  "文件ID"
+// @Param        refId  path      uint  true  "引用ID"
+// @Success      200  {object}  response.Response  "删除引用成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/{id}/reference/{refId} [delete]
+// @Security     BearerAuth
 func (ctrl *FileController) DeleteReference(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	fileID, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -199,6 +290,19 @@ func (ctrl *FileController) DeleteReference(c *gin.Context) {
 // ==================== Access Log ====================
 
 // GetAccessLogs 获取文件访问日志
+// @Summary      获取文件访问日志
+// @Description  获取指定文件的访问日志，支持分页
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        id         path      uint  true   "文件ID"
+// @Param        page       query     int   false  "页码"
+// @Param        page_size  query     int   false  "每页数量"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /file/{id}/access-logs [get]
+// @Security     BearerAuth
 func (ctrl *FileController) GetAccessLogs(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -223,6 +327,17 @@ func (ctrl *FileController) GetAccessLogs(c *gin.Context) {
 // ==================== Legacy ====================
 
 // DeleteFile 删除文件
+// @Summary      删除文件
+// @Description  根据文件ID删除文件
+// @Tags         文件管理
+// @Accept       json
+// @Produce      json
+// @Param        id  path      uint  true  "文件ID"
+// @Success      200  {object}  response.Response  "删除成功"
+// @Failure      400  {object}  response.Response  "无效的文件ID"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /files/{id} [delete]
+// @Security     BearerAuth
 func (ctrl *FileController) DeleteFile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)

@@ -10,6 +10,16 @@ import (
 )
 
 // GetQuestionDifficulty 题目难度分析
+// @Summary      获取题目难度分析
+// @Description  根据查询条件获取题目难度分析数据
+// @Tags         数据统计
+// @Accept       json
+// @Produce      json
+// @Param        req  query     dto.QuestionDifficultyRequest  false  "查询参数"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /statistics/question/difficulty [get]
+// @Security     BearerAuth
 func (ctrl *StatisticsController) GetQuestionDifficulty(c *gin.Context) {
 	var req dto.QuestionDifficultyRequest
 	c.ShouldBindQuery(&req)
@@ -23,6 +33,16 @@ func (ctrl *StatisticsController) GetQuestionDifficulty(c *gin.Context) {
 }
 
 // GetQuestionDiscrimination 题目区分度分析
+// @Summary      获取题目区分度分析
+// @Description  根据查询条件获取题目区分度分析数据
+// @Tags         数据统计
+// @Accept       json
+// @Produce      json
+// @Param        req  query     dto.QuestionDiscriminationRequest  false  "查询参数"
+// @Success      200  {object}  response.Response  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /statistics/question/discrimination [get]
+// @Security     BearerAuth
 func (ctrl *StatisticsController) GetQuestionDiscrimination(c *gin.Context) {
 	var req dto.QuestionDiscriminationRequest
 	c.ShouldBindQuery(&req)
