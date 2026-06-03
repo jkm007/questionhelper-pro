@@ -109,10 +109,10 @@ func (ctrl *ExamController) StartExam(c *gin.Context) {
 // @Success      200  {object}  response.Response  "提交成功"
 // @Failure      400  {object}  response.Response  "参数错误"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
-// @Router       /exam/{recordId}/submit [post]
+// @Router       /exam/{id}/submit [post]
 // @Security     BearerAuth
 func (ctrl *ExamController) SubmitExam(c *gin.Context) {
-	recordID, err := strconv.ParseUint(c.Param("recordId"), 10, 32)
+	recordID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的记录ID")
 		return

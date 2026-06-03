@@ -19,7 +19,7 @@ import (
 // @Param        category_id  query     uint  false  "分类ID"
 // @Success      200  {object}  response.Response  "成功"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
-// @Router       /knowledge-points [get]
+// @Router       /admin/knowledge-points [get]
 // @Security     BearerAuth
 func (ctrl *QuestionController) ListKnowledgePoints(c *gin.Context) {
 	var categoryID *uint

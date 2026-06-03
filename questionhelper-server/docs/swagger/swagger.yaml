@@ -1,3 +1,4 @@
+basePath: /api/v1
 definitions:
   dto.AddBlacklistRequest:
     properties:
@@ -743,6 +744,20 @@ definitions:
         type: integer
       sort:
         type: integer
+    required:
+    - name
+    type: object
+  dto.CreateClassRequest:
+    properties:
+      cover:
+        maxLength: 255
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        type: string
     required:
     - name
     type: object
@@ -2224,6 +2239,36 @@ definitions:
         maxLength: 500
         type: string
     type: object
+  dto.PermissionInfo:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      type:
+        type: integer
+    type: object
+  dto.PermissionTreeNode:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/dto.PermissionTreeNode'
+        type: array
+      code:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      type:
+        type: integer
+    type: object
   dto.PracticeRecordInfo:
     properties:
       answer:
@@ -3318,6 +3363,18 @@ definitions:
       priority:
         type: integer
     type: object
+  dto.UpdateClassRequest:
+    properties:
+      cover:
+        maxLength: 255
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 100
+        type: string
+    type: object
   dto.UpdateCommentRequest:
     properties:
       content:
@@ -3933,8 +3990,19 @@ definitions:
       msg:
         type: string
     type: object
+host: localhost:8080
 info:
-  contact: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 题小助题库管理与在线考试平台 API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: 题小助 API
+  version: "1.0"
 paths:
   /admin/alerts/records:
     get:
@@ -4399,6 +4467,33 @@ paths:
       tags:
       - 缓存管理
   /admin/categories:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有题目分类列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.CategoryInfo'
+                  type: array
+              type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取分类列表
+      tags:
+      - 分类管理
     post:
       consumes:
       - application/json
@@ -4497,6 +4592,187 @@ paths:
       summary: 更新分类
       tags:
       - 分类管理
+  /admin/class:
+    get:
+      consumes:
+      - application/json
+      description: 管理员获取班级列表，支持分页
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取班级列表
+      tags:
+      - 班级管理
+    post:
+      consumes:
+      - application/json
+      description: 管理员创建新班级
+      parameters:
+      - description: 班级信息
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateClassRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建班级
+      tags:
+      - 班级管理
+  /admin/class/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 管理员删除班级
+      parameters:
+      - description: 班级ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除班级
+      tags:
+      - 班级管理
+    get:
+      consumes:
+      - application/json
+      description: 管理员获取班级详情
+      parameters:
+      - description: 班级ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取班级详情
+      tags:
+      - 班级管理
+    put:
+      consumes:
+      - application/json
+      description: 管理员更新班级信息
+      parameters:
+      - description: 班级ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 班级信息
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateClassRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新班级
+      tags:
+      - 班级管理
+  /admin/class/{id}/members:
+    get:
+      consumes:
+      - application/json
+      description: 管理员获取班级成员列表
+      parameters:
+      - description: 班级ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取班级成员列表
+      tags:
+      - 班级管理
+  /admin/class/{id}/members/{uid}:
+    delete:
+      consumes:
+      - application/json
+      description: 管理员移除班级成员
+      parameters:
+      - description: 班级ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 用户ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 移除班级成员
+      tags:
+      - 班级管理
   /admin/comments:
     get:
       consumes:
@@ -6360,6 +6636,31 @@ paths:
       tags:
       - 文件管理(管理员)
   /admin/knowledge-points:
+    get:
+      consumes:
+      - application/json
+      description: 获取知识点列表，支持按分类筛选
+      parameters:
+      - description: 分类ID
+        in: query
+        name: category_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取知识点列表
+      tags:
+      - 知识点管理
     post:
       consumes:
       - application/json
@@ -7828,7 +8129,14 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/response.Response'
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PermissionInfo'
+                  type: array
+              type: object
         "500":
           description: 服务器内部错误
           schema:
@@ -7837,19 +8145,26 @@ paths:
       - BearerAuth: []
       summary: 获取权限列表
       tags:
-      - 角色管理
+      - 权限管理
   /admin/permissions/tree:
     get:
       consumes:
       - application/json
-      description: 获取系统权限树结构（管理员）
+      description: 获取系统权限树结构，按类型分组（管理员）
       produces:
       - application/json
       responses:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/response.Response'
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PermissionTreeNode'
+                  type: array
+              type: object
         "500":
           description: 服务器内部错误
           schema:
@@ -7858,7 +8173,7 @@ paths:
       - BearerAuth: []
       summary: 获取权限树
       tags:
-      - 角色管理
+      - 权限管理
   /admin/questions:
     get:
       consumes:
@@ -12134,34 +12449,6 @@ paths:
       summary: 切换角色
       tags:
       - 认证
-  /categories:
-    get:
-      consumes:
-      - application/json
-      description: 获取所有题目分类列表
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/dto.CategoryInfo'
-                  type: array
-              type: object
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 获取分类列表
-      tags:
-      - 分类管理
   /categories/tree:
     get:
       consumes:
@@ -13720,6 +14007,43 @@ paths:
       summary: 开始考试
       tags:
       - 考试管理
+  /exam/{id}/submit:
+    post:
+      consumes:
+      - application/json
+      description: 学生提交考试答卷
+      parameters:
+      - description: 考试记录ID
+        in: path
+        name: recordId
+        required: true
+        type: integer
+      - description: 提交信息
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SubmitExamRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 提交成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 提交考试
+      tags:
+      - 考试管理
   /exam/{id}/switch-screen:
     post:
       consumes:
@@ -13757,43 +14081,6 @@ paths:
       summary: 上报切屏事件
       tags:
       - 考试扩展
-  /exam/{recordId}/submit:
-    post:
-      consumes:
-      - application/json
-      description: 学生提交考试答卷
-      parameters:
-      - description: 考试记录ID
-        in: path
-        name: recordId
-        required: true
-        type: integer
-      - description: 提交信息
-        in: body
-        name: req
-        required: true
-        schema:
-          $ref: '#/definitions/dto.SubmitExamRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 提交成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "400":
-          description: 参数错误
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 提交考试
-      tags:
-      - 考试管理
   /exam/history:
     get:
       consumes:
@@ -14501,53 +14788,6 @@ paths:
       summary: 删除文件
       tags:
       - 文件管理
-  /knowledge-points:
-    get:
-      consumes:
-      - application/json
-      description: 获取知识点列表，支持按分类筛选
-      parameters:
-      - description: 分类ID
-        in: query
-        name: category_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 获取知识点列表
-      tags:
-      - 知识点管理
-  /menu/buttons:
-    get:
-      consumes:
-      - application/json
-      description: 获取当前登录用户的按钮权限列表
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: 服务器内部错误
-          schema:
-            $ref: '#/definitions/response.Response'
-      security:
-      - BearerAuth: []
-      summary: 获取当前用户的按钮权限
-      tags:
-      - 菜单管理
   /menu/user:
     get:
       consumes:
@@ -14567,6 +14807,27 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取当前用户的菜单
+      tags:
+      - 菜单管理
+  /menus/buttons:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的按钮权限列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户的按钮权限
       tags:
       - 菜单管理
   /menus/routes:
@@ -18666,6 +18927,32 @@ paths:
       summary: 更新安全设置
       tags:
       - 用户认证
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的个人信息（兼容前端 /users/me 接口）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserInfo'
+              type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取个人信息
+      tags:
+      - 个人中心
   /wrong:
     get:
       consumes:
@@ -19725,4 +20012,9 @@ paths:
       summary: 更新错题标签
       tags:
       - 错题标签
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

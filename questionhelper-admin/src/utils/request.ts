@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
-import { useUserStore } from "@/stores/user";
+import { getToken } from "@/utils/auth";
 import { ElMessage } from "element-plus";
 
 const service: AxiosInstance = axios.create({
@@ -11,9 +11,9 @@ const service: AxiosInstance = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const userStore = useUserStore();
-    if (userStore.token) {
-      config.headers.Authorization = `Bearer ${userStore.token}`;
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -32,8 +32,9 @@ service.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      const userStore = useUserStore();
-      userStore.logout();
+      // Token 过期，清除本地存储并跳转登录
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       window.location.href = "/login";
     }
     ElMessage.error(error.message || "网络错误");

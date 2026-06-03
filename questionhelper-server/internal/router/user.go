@@ -38,7 +38,7 @@ func SetupUserRoutes(r *gin.RouterGroup, userCtrl *user.UserController, profileC
 	// 兼容前端 /users/me 接口
 	users := r.Group("/users")
 	{
-		users.GET("/me", userCtrl.GetProfile)
+		users.GET("/me", userCtrl.GetMe)
 	}
 
 	// 角色申请
@@ -83,6 +83,13 @@ func SetupAdminUserRoutes(r *gin.RouterGroup, userCtrl *user.UserController, pro
 		// 角色权限管理
 		role.GET("/:id/permissions", userCtrl.ListRolePermissions)
 		role.PUT("/:id/permissions", userCtrl.AssignRolePermissions)
+	}
+
+	// 权限管理
+	perm := r.Group("/permissions")
+	{
+		perm.GET("", userCtrl.ListPermissions)
+		perm.GET("/tree", userCtrl.GetPermissionTree)
 	}
 
 	// 实名认证审核

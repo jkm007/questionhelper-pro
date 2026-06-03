@@ -187,7 +187,7 @@ func (ctrl *QuestionController) LikeQuestion(c *gin.Context) {
 // @Produce      json
 // @Success      200  {object}  response.Response{data=[]dto.CategoryInfo}  "成功"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
-// @Router       /categories [get]
+// @Router       /admin/categories [get]
 // @Security     BearerAuth
 func (ctrl *QuestionController) ListCategories(c *gin.Context) {
 	list, err := question.ListCategories()

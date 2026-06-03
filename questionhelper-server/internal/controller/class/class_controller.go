@@ -143,6 +143,16 @@ func (ctrl *ClassController) ListHomework(c *gin.Context) {
 }
 
 // AdminListClasses 班级列表（管理员）
+// @Summary      获取班级列表
+// @Description  管理员获取班级列表，支持分页
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class [get]
 func (ctrl *ClassController) AdminListClasses(c *gin.Context) {
 	var req dto.ClassListRequest
 	c.ShouldBindQuery(&req)
@@ -156,6 +166,15 @@ func (ctrl *ClassController) AdminListClasses(c *gin.Context) {
 }
 
 // AdminGetClass 获取班级详情（管理员）
+// @Summary      获取班级详情
+// @Description  管理员获取班级详情
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "班级ID"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class/{id} [get]
 func (ctrl *ClassController) AdminGetClass(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -172,6 +191,15 @@ func (ctrl *ClassController) AdminGetClass(c *gin.Context) {
 }
 
 // AdminCreateClass 创建班级（管理员）
+// @Summary      创建班级
+// @Description  管理员创建新班级
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        req body dto.CreateClassRequest true "班级信息"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class [post]
 func (ctrl *ClassController) AdminCreateClass(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -189,6 +217,16 @@ func (ctrl *ClassController) AdminCreateClass(c *gin.Context) {
 }
 
 // AdminUpdateClass 更新班级（管理员）
+// @Summary      更新班级
+// @Description  管理员更新班级信息
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "班级ID"
+// @Param        req body dto.UpdateClassRequest true "班级信息"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class/{id} [put]
 func (ctrl *ClassController) AdminUpdateClass(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
@@ -212,6 +250,15 @@ func (ctrl *ClassController) AdminUpdateClass(c *gin.Context) {
 }
 
 // AdminDeleteClass 删除班级（管理员）
+// @Summary      删除班级
+// @Description  管理员删除班级
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "班级ID"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class/{id} [delete]
 func (ctrl *ClassController) AdminDeleteClass(c *gin.Context) {
 	userID := c.GetUint("user_id")
 

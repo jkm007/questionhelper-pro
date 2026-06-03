@@ -116,3 +116,18 @@ type UpdateRoleRequest struct {
 	Status      *int8  `json:"status"`
 	MenuIDs     []uint `json:"menu_ids"`
 }
+
+// PermissionInfo 权限信息
+type PermissionInfo struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Code        string `json:"code"`
+	Description string `json:"description"`
+	Type        int8   `json:"type"`
+}
+
+// PermissionTreeNode 权限树节点
+type PermissionTreeNode struct {
+	PermissionInfo
+	Children []PermissionTreeNode `json:"children,omitempty"`
+}

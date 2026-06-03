@@ -77,7 +77,7 @@ func SetupAdminQuestionRoutes(r *gin.RouterGroup, ctrl *question.QuestionControl
 		// 版本管理
 		q.GET("/:id/versions", versionCtrl.ListVersions)
 		q.GET("/:id/versions/:versionId", versionCtrl.GetVersionDetail)
-		q.POST("/:id/versions/:version/rollback", versionCtrl.RollbackVersion)
+		q.POST("/:id/versions/:versionId/rollback", versionCtrl.RollbackVersion)
 
 		// 分享
 		q.POST("/:id/share", shareCtrl.CreateShare)
@@ -113,6 +113,7 @@ func SetupAdminQuestionRoutes(r *gin.RouterGroup, ctrl *question.QuestionControl
 	// 分类管理（管理员）
 	categories := r.Group("/categories")
 	{
+		categories.GET("", ctrl.ListCategories)
 		categories.POST("", ctrl.CreateCategory)
 		categories.PUT("/:id", ctrl.UpdateCategory)
 		categories.DELETE("/:id", ctrl.DeleteCategory)
@@ -121,6 +122,7 @@ func SetupAdminQuestionRoutes(r *gin.RouterGroup, ctrl *question.QuestionControl
 	// 知识点管理（管理员）
 	knowledge := r.Group("/knowledge-points")
 	{
+		knowledge.GET("", ctrl.ListKnowledgePoints)
 		knowledge.POST("", ctrl.CreateKnowledgePoint)
 		knowledge.PUT("/:id", ctrl.UpdateKnowledgePoint)
 		knowledge.DELETE("/:id", ctrl.DeleteKnowledgePoint)

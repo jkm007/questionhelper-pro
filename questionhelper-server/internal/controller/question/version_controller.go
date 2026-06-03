@@ -92,7 +92,7 @@ func (ctrl *VersionController) RollbackVersion(c *gin.Context) {
 		return
 	}
 
-	version, err := strconv.Atoi(c.Param("version"))
+	version, err := strconv.Atoi(c.Param("versionId"))
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "无效的版本号")
 		return

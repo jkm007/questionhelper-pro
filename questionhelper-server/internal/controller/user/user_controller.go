@@ -27,6 +27,24 @@ func NewUserController() *UserController {
 // @Router       /user/profile [get]
 // @Security     BearerAuth
 func (ctrl *UserController) GetProfile(c *gin.Context) {
+	ctrl.getProfile(c)
+}
+
+// GetMe 获取个人信息（兼容前端 /users/me 接口）
+// @Summary      获取个人信息
+// @Description  获取当前登录用户的个人信息（兼容前端 /users/me 接口）
+// @Tags         个人中心
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response{data=dto.UserInfo}  "成功"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /users/me [get]
+// @Security     BearerAuth
+func (ctrl *UserController) GetMe(c *gin.Context) {
+	ctrl.getProfile(c)
+}
+
+func (ctrl *UserController) getProfile(c *gin.Context) {
 	userID := c.GetUint("user_id")
 
 	info, err := user.GetProfile(userID)
@@ -556,9 +574,12 @@ func (ctrl *UserController) ListRoleMenus(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现获取角色菜单
-	_ = id
-	response.Error(c, 501, "接口未实现")
+	menus, err := user.GetRoleMenus(uint(id))
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, menus)
 }
 
 // ListRolePermissions 获取角色权限
@@ -580,8 +601,11 @@ func (ctrl *UserController) ListRolePermissions(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现获取角色权限
-	_ = id
-	response.Error(c, 501, "接口未实现")
+	permissions, err := user.GetRolePermissions(uint(id))
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.Success(c, permissions)
 }
 

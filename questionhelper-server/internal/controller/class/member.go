@@ -63,6 +63,17 @@ func (ctrl *ClassController) ListMembers(c *gin.Context) {
 }
 
 // AdminListMembers 成员列表（管理员）
+// @Summary      获取班级成员列表
+// @Description  管理员获取班级成员列表
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "班级ID"
+// @Param        page query int false "页码"
+// @Param        page_size query int false "每页数量"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class/{id}/members [get]
 func (ctrl *ClassController) AdminListMembers(c *gin.Context) {
 	classID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -82,6 +93,16 @@ func (ctrl *ClassController) AdminListMembers(c *gin.Context) {
 }
 
 // RemoveMember 移除成员（管理员）
+// @Summary      移除班级成员
+// @Description  管理员移除班级成员
+// @Tags         班级管理
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "班级ID"
+// @Param        uid path int true "用户ID"
+// @Security     BearerAuth
+// @Success      200 {object} response.Response
+// @Router       /admin/class/{id}/members/{uid} [delete]
 func (ctrl *ClassController) RemoveMember(c *gin.Context) {
 	operatorID := c.GetUint("user_id")
 

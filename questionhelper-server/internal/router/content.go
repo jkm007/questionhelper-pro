@@ -94,7 +94,7 @@ func SetupContentRoutes(r *gin.RouterGroup, ctrl *content.ContentController) {
 // SetupAdminContentRoutes 管理员内容路由
 func SetupAdminContentRoutes(r *gin.RouterGroup, ctrl *content.ContentController) {
 	// 审核流程（仅管理员可操作）
-	reviews := r.Group("/reviews")
+	reviews := r.Group("/content-reviews")
 	{
 		reviews.GET("/pending", ctrl.ListPendingReviews)
 		reviews.GET("/:id", ctrl.GetReviewDetail)

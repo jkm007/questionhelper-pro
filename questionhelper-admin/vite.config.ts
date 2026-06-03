@@ -8,10 +8,9 @@ import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
-  const { VITE_APP_BASE_API, VITE_APP_BASE_URL } = env;
+  const { VITE_APP_BASE_API } = env;
 
   return {
-    base: VITE_APP_BASE_URL || "/",
     plugins: [
       vue(),
       UnoCSS(),
@@ -28,6 +27,13 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
+      },
+    },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: `@use "@/styles/base/variables.scss" as *;`,
+        },
       },
     },
     server: {

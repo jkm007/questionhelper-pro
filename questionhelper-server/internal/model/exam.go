@@ -29,6 +29,8 @@ type Exam struct {
 	RankingType    int            `gorm:"default:1;comment:排名方式:1=按分数,2=按用时,3=按正确率" json:"ranking_type"`
 	OriginalEndTime *time.Time    `json:"original_end_time"`                                // 原始结束时间
 	ExtendReason   string         `gorm:"size:500;comment:延期原因" json:"extend_reason"`
+	RemindSent     bool           `gorm:"default:false;comment:开考提醒是否已发送" json:"remind_sent"`
+	EndRemindSent  bool           `gorm:"default:false;comment:结束提醒是否已发送" json:"end_remind_sent"`
 	CreatorID      uint           `gorm:"index" json:"creator_id"`
 	Creator       User           `json:"creator,omitempty"`
 	CreatedAt     time.Time      `json:"created_at"`
@@ -95,7 +97,8 @@ type ExamRecord struct {
 	IP           string         `gorm:"size:50" json:"ip"`
 	SwitchCount    int            `gorm:"default:0;comment:切屏次数" json:"switch_count"`
 	IPChanges      int            `gorm:"default:0;comment:IP变更次数" json:"ip_changes"`
-	OverallComment string         `gorm:"type:text;comment:总体评语" json:"overall_comment"`
+	OverallComment  string         `gorm:"type:text;comment:总体评语" json:"overall_comment"`
+	ScoreWarningSent bool          `gorm:"default:false;comment:成绩预警是否已发送" json:"score_warning_sent"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`

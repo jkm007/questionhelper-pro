@@ -1,7 +1,7 @@
 import request from "@/utils/request";
 
 export function getOverviewApi() {
-  return request.get("/admin/statistics");
+  return request.get("/admin/statistics/dashboard");
 }
 
 export function getRetentionApi(params?: any) {

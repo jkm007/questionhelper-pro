@@ -179,10 +179,11 @@ func (ctrl *UserController) AssignRoleMenus(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现分配角色菜单
-	_ = id
-	_ = req.MenuIDs
-	response.Error(c, 501, "接口未实现")
+	if err := user.AssignRoleMenus(uint(id), req.MenuIDs); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "分配成功", nil)
 }
 
 // AssignRolePermissions 分配角色权限
@@ -213,8 +214,9 @@ func (ctrl *UserController) AssignRolePermissions(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实现分配角色权限
-	_ = id
-	_ = req.PermissionIDs
-	response.Error(c, 501, "接口未实现")
+	if err := user.AssignRolePermissions(uint(id), req.PermissionIDs); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.SuccessWithMessage(c, "分配成功", nil)
 }

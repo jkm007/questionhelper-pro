@@ -2,6 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"questionhelper-server/docs/swagger"
 	"questionhelper-server/internal/controller/auth"
 	"questionhelper-server/internal/controller/class"
 	"questionhelper-server/internal/controller/comment"
@@ -31,6 +34,9 @@ func Setup(cfg *config.Config, hub *ws.Hub) *gin.Engine {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	// Swagger 文档
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.InstanceName(swagger.SwaggerInfo.InstanceName())))
 
 	// 静态文件服务 —— 上传文件可通过 /uploads/xxx 访问
 	r.Static("/uploads", "./uploads")

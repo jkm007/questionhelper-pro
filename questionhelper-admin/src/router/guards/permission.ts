@@ -1,41 +1,58 @@
+import type { RouteRecordRaw } from "vue-router";
 import router from "@/router";
-import { useUserStore } from "@/stores/user";
-import { usePermissionStore } from "@/stores/permission";
-import { getToken } from "@/utils/auth";
+import { usePermissionStore, useUserStore } from "@/stores";
 
-const whiteList = ["/login", "/401", "/404"];
+/**
+ * 路由权限守卫
+ */
+export function setupPermissionGuard() {
+  const whiteList = ["/login"];
 
-router.beforeEach(async (to, _from, next) => {
-  const token = getToken();
+  router.beforeEach(async (to, _from) => {
+    try {
+      const userStore = useUserStore();
+      const isLoggedIn = userStore.isLoggedIn();
 
-  if (token) {
-    if (to.path === "/login") {
-      next({ path: "/" });
-      return;
-    }
-
-    const userStore = useUserStore();
-    const permissionStore = usePermissionStore();
-
-    if (!userStore.userInfo) {
-      try {
-        await userStore.getUserInfo();
-        const routes = await permissionStore.generateRoutes();
-        routes.forEach((route) => router.addRoute(route));
-        next({ ...to, replace: true });
-      } catch {
-        await userStore.logout();
-        next(`/login?redirect=${to.path}`);
+      // 未登录处理
+      if (!isLoggedIn) {
+        if (whiteList.includes(to.path)) {
+          return;
+        }
+        return `/login?redirect=${encodeURIComponent(to.fullPath)}`;
       }
-      return;
-    }
 
-    next();
-  } else {
-    if (whiteList.includes(to.path)) {
-      next();
-    } else {
-      next(`/login?redirect=${to.path}`);
+      // 已登录访问登录页，重定向到首页
+      if (to.path === "/login") {
+        return { path: "/" };
+      }
+
+      const permissionStore = usePermissionStore();
+
+      // 动态路由生成
+      if (!permissionStore.isRouteGenerated) {
+        if (!userStore.userInfo?.roles?.length) {
+          await userStore.getUserInfo();
+        }
+
+        const dynamicRoutes = await permissionStore.generateRoutes();
+        dynamicRoutes.forEach((route: RouteRecordRaw) => {
+          router.addRoute(route);
+        });
+
+        return { ...to, replace: true };
+      }
+
+      // 路由 404 检查
+      if (to.matched.length === 0) {
+        if (_from.path === "/login") {
+          return { path: "/", replace: true };
+        }
+        return "/404";
+      }
+    } catch (error) {
+      console.error("Route guard error:", error);
+      userStore.resetUserState();
+      return "/login";
     }
-  }
-});
+  });
+}

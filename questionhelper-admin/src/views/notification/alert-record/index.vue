@@ -1,10 +1,11 @@
 <template>
-  <div class="page-container">
-    <h3>告警记录</h3>
-    <p>页面开发中...</p>
+  <div class="app-container">
+    <el-card>
+      <el-empty description="功能开发中..." />
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-// 告警记录
+defineOptions({ name: "alert-record" });
 </script>

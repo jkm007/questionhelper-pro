@@ -1,25 +1,19 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/**
+ * 样式总入口
+ * 严格按照 ITCSS 架构顺序导入
+ */
 
-html, body, #app {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
+// 1. 基础层
+@use "./base/variables" as *;
+@use "./base/theme";
+@use "./base/reset";
 
-.page-container {
-  padding: 20px;
-}
+// 2. 第三方适配层
+@use "./vendors/element-plus";
+@use "./vendors/element-plus-override";
+@use "./vendors/vxe-table";
+@use "./vendors/wangeditor";
+@use "./vendors/nprogress";
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.search-form {
-  margin-bottom: 16px;
-}
+// 3. 布局层
+@use "./layout/layout";

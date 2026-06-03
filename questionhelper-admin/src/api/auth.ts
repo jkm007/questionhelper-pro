@@ -9,7 +9,7 @@ export function getUserInfoApi() {
 }
 
 export function logoutApi() {
-  return request.post("/auth/logout");
+  return request.post("/user/logout");
 }
 
 export function refreshTokenApi(refreshToken: string) {

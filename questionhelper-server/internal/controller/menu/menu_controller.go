@@ -66,7 +66,7 @@ func (ctrl *MenuController) GetUserRoutes(c *gin.Context) {
 // @Produce      json
 // @Success      200  {object}  response.Response  "成功"
 // @Failure      500  {object}  response.Response  "服务器内部错误"
-// @Router       /menu/buttons [get]
+// @Router       /menus/buttons [get]
 // @Security     BearerAuth
 func (ctrl *MenuController) GetUserButtons(c *gin.Context) {
 	userID := c.GetUint("user_id")

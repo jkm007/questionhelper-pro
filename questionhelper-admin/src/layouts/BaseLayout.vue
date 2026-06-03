@@ -1,159 +1,32 @@
 <template>
-  <div class="app-wrapper">
-    <el-container>
-      <el-aside :width="appStore.sidebarCollapsed ? '64px' : '210px'" class="sidebar">
-        <div class="logo">
-          <img v-if="appStore.sidebarCollapsed" src="/images/logo-sm.png" alt="logo" class="logo-img-sm" />
-          <template v-else>
-            <img src="/images/logo.png" alt="logo" class="logo-img" />
-            <span class="logo-text">题小助</span>
-          </template>
-        </div>
-        <el-menu
-          :default-active="activeMenu"
-          :collapse="appStore.sidebarCollapsed"
-          router
-          background-color="#304156"
-          text-color="#bfcbd9"
-          active-text-color="#409eff"
-        >
-          <template v-for="route in menuRoutes" :key="route.path">
-            <el-sub-menu v-if="route.children?.length" :index="route.path">
-              <template #title>
-                <el-icon v-if="route.meta?.icon"><component :is="route.meta.icon" /></el-icon>
-                <span>{{ route.meta?.title }}</span>
-              </template>
-              <el-menu-item
-                v-for="child in route.children"
-                :key="child.path"
-                :index="`${route.path}/${child.path}`"
-              >
-                <span>{{ child.meta?.title }}</span>
-              </el-menu-item>
-            </el-sub-menu>
-            <el-menu-item v-else :index="route.path">
-              <el-icon v-if="route.meta?.icon"><component :is="route.meta.icon" /></el-icon>
-              <span>{{ route.meta?.title }}</span>
-            </el-menu-item>
-          </template>
-        </el-menu>
-      </el-aside>
+  <div class="layout" :class="layoutClass">
+    <!-- 移动端遮罩层 -->
+    <div v-if="isMobile && isSidebarOpen" class="layout__overlay" @click="closeSidebar" />
 
-      <el-container>
-        <el-header class="navbar">
-          <div class="navbar-left">
-            <el-icon class="collapse-btn" @click="appStore.toggleSidebar">
-              <Fold v-if="!appStore.sidebarCollapsed" />
-              <Expand v-else />
-            </el-icon>
-            <Breadcrumb />
-          </div>
-          <div class="navbar-right">
-            <el-dropdown>
-              <span class="user-info">
-                <el-avatar :size="28" :src="userStore.userInfo?.avatar || '/images/default-avatar.png'" />
-                <span class="username">{{ userStore.userInfo?.nickname || "管理员" }}</span>
-                <el-icon><ArrowDown /></el-icon>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item @click="$router.push('/profile')">个人中心</el-dropdown-item>
-                  <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-        </el-header>
-
-        <el-main>
-          <router-view />
-        </el-main>
-      </el-container>
-    </el-container>
+    <!-- 布局内容插槽 -->
+    <slot />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { useAppStore } from "@/stores/app";
-import { useUserStore } from "@/stores/user";
-import { usePermissionStore } from "@/stores/permission";
-import Breadcrumb from "@/components/Breadcrumb/index.vue";
-import { Fold, Expand, ArrowDown } from "@element-plus/icons-vue";
+import { useLayout } from "./useLayout";
 
-const route = useRoute();
-const router = useRouter();
-const appStore = useAppStore();
-const userStore = useUserStore();
-const permissionStore = usePermissionStore();
-
-const activeMenu = computed(() => route.path);
-const menuRoutes = computed(() =>
-  permissionStore.routes.filter((r) => !r.meta?.hidden)
-);
-
-async function handleLogout() {
-  await userStore.logout();
-  router.push("/login");
-}
+const { layoutClass, isSidebarOpen, isMobile, closeSidebar } = useLayout();
 </script>
 
-<style scoped>
-.app-wrapper {
-  height: 100vh;
-}
-.sidebar {
-  background: #304156;
-  overflow-y: auto;
-  transition: width 0.3s;
-}
-.logo {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #fff;
-  padding: 0 12px;
-}
-.logo-img {
-  width: 32px;
-  height: 32px;
-}
-.logo-img-sm {
-  width: 32px;
-  height: 32px;
-}
-.logo-text {
-  font-size: 16px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #eee;
-  background: #fff;
-}
-.navbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.collapse-btn {
-  cursor: pointer;
-  font-size: 20px;
-}
-.user-info {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  gap: 8px;
-}
-.username {
-  font-size: 14px;
-  color: #303133;
+<style lang="scss" scoped>
+.layout {
+  width: 100%;
+  height: 100%;
+
+  &__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+  }
 }
 </style>

@@ -22,6 +22,25 @@ import (
 	"questionhelper-server/pkg/sms"
 )
 
+// @title           题小助 API
+// @version         1.0
+// @description     题小助题库管理与在线考试平台 API
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
